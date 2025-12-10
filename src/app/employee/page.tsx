@@ -53,7 +53,7 @@ export default async function EmployeeDashboard() {
             <Avatar className="h-8 w-8">
               <AvatarImage src={employee.avatar} />
               <AvatarFallback>
-                {employee.name.split(' ').map(n => n[0]).join('')}
+                {employee.name.split(' ').map((n: string) => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
             <form action="/api/auth/signout" method="post">
@@ -88,7 +88,7 @@ export default async function EmployeeDashboard() {
               <Avatar className="h-20 w-20">
                 <AvatarImage src={employee.avatar} />
                 <AvatarFallback className="text-2xl">
-                  {employee.name.split(' ').map(n => n[0]).join('')}
+                  {employee.name.split(' ').map((n: string) => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-1">
@@ -136,32 +136,22 @@ export default async function EmployeeDashboard() {
             </CardContent>
           </Card>
 
-          {/* Upcoming Payment */}
+          {/* Payment Info */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
-                Upcoming Payment
+                Payment Info
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div>
-                  <p className="text-3xl font-bold">
-                    C${upcomingPayment.amount.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-muted-foreground">December 2024</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">Payment Date</p>
-                  <Badge variant="secondary">{upcomingPayment.date}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <Badge variant="outline" className="capitalize">
-                    {upcomingPayment.status}
-                  </Badge>
-                </div>
+                <p className="text-muted-foreground text-sm">
+                  Payment information will be available once Deel integration is connected.
+                </p>
+                <Button variant="outline" size="sm" disabled>
+                  Connect Deel
+                </Button>
               </div>
             </CardContent>
           </Card>
