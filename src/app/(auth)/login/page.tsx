@@ -34,16 +34,27 @@ export default function LoginPage() {
       return
     }
 
-    // Check user role and redirect accordingly
-    const { data: user } = await supabase
+    // Get the authenticated user's ID
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+
+    if (!authUser) {
+      setError('Authentication failed')
+      setLoading(false)
+      return
+    }
+
+    // Check user role and redirect accordingly - query by ID not email
+    const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('role, onboarding_completed')
-      .eq('email', email)
+      .eq('id', authUser.id)
       .single()
 
-    if (user?.role === 'founder') {
+    console.log('Login profile lookup:', { profile, profileError })
+
+    if (profile?.role === 'founder') {
       router.push('/dashboard')
-    } else if (!user?.onboarding_completed) {
+    } else if (!profile?.onboarding_completed) {
       router.push('/onboarding')
     } else {
       router.push('/employee')

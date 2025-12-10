@@ -86,6 +86,9 @@ export default function SignUpPage() {
         })
         if (orgError) {
           console.error('Org creation error:', orgError)
+          setError(`Failed to create organization: ${orgError.message}`)
+          setLoading(false)
+          return
         }
       }
 
@@ -102,13 +105,17 @@ export default function SignUpPage() {
 
       if (profileError) {
         console.error('Profile creation error:', profileError)
+        setError(`Failed to create profile: ${profileError.message}`)
+        setLoading(false)
+        return
       }
-    }
 
-    if (role === 'founder') {
-      router.push('/dashboard')
-    } else {
-      router.push('/onboarding')
+      // Success - redirect based on role
+      if (role === 'founder') {
+        router.push('/dashboard')
+      } else {
+        router.push('/onboarding')
+      }
     }
   }
 
