@@ -65,13 +65,16 @@ export default function LoginPage() {
       return
     }
 
-    if (profile.role === 'founder') {
-      router.push('/dashboard')
-    } else if (!profile.onboarding_completed) {
-      router.push('/onboarding')
-    } else {
-      router.push('/employee')
-    }
+    // Redirect based on role
+    const destination = profile.role === 'founder'
+      ? '/dashboard'
+      : !profile.onboarding_completed
+        ? '/onboarding'
+        : '/employee'
+
+    console.log('Redirecting to:', destination)
+    router.push(destination)
+    router.refresh()
   }
 
   return (
