@@ -73,8 +73,9 @@ export default function LoginPage() {
         : '/employee'
 
     console.log('Redirecting to:', destination)
-    router.push(destination)
-    router.refresh()
+
+    // Use hard redirect to ensure navigation works
+    window.location.href = destination
   }
 
   return (
