@@ -5,24 +5,39 @@ import { Button } from '@/components/ui/button'
 import { User, Users, Calendar, FileText, DollarSign, LogOut } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 
-export default function EmployeeDashboard() {
-  // Mock employee data
-  const employee = {
-    name: 'Alex Kim',
-    email: 'alex@acme-startup.com',
-    position: 'Backend Developer',
-    department: 'Engineering',
-    manager: 'Sarah Chen',
-    startDate: '2024-08-01',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
+export default async function EmployeeDashboard() {
+  const supabase = await createClient()
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
   }
 
-  const upcomingPayment = {
-    amount: 7916.67,
-    currency: 'CAD',
-    date: '2024-12-15',
-    status: 'scheduled',
+  // Get user profile
+  const { data: profile } = await supabase
+    .from('users')
+    .select('*, organizations(name)')
+    .eq('id', user.id)
+    .single()
+
+  // If founder, redirect to dashboard
+  if (profile?.role === 'founder') {
+    redirect('/dashboard')
+  }
+
+  const employee = {
+    name: profile?.name || 'Team Member',
+    email: profile?.email || user.email || '',
+    position: profile?.position || 'Team Member',
+    department: profile?.department || 'Not set',
+    companyName: profile?.organizations?.name || 'Your Company',
+    startDate: profile?.created_at || new Date().toISOString(),
+    avatar: profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.name || 'user'}`,
   }
 
   return (
@@ -37,14 +52,16 @@ export default function EmployeeDashboard() {
           <div className="flex items-center gap-4">
             <Avatar className="h-8 w-8">
               <AvatarImage src={employee.avatar} />
-              <AvatarFallback>AK</AvatarFallback>
+              <AvatarFallback>
+                {employee.name.split(' ').map(n => n[0]).join('')}
+              </AvatarFallback>
             </Avatar>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">
+            <form action="/api/auth/signout" method="post">
+              <Button variant="ghost" size="sm" type="submit">
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
-              </Link>
-            </Button>
+              </Button>
+            </form>
           </div>
         </div>
       </header>
@@ -70,7 +87,9 @@ export default function EmployeeDashboard() {
             <div className="flex items-center gap-6">
               <Avatar className="h-20 w-20">
                 <AvatarImage src={employee.avatar} />
-                <AvatarFallback className="text-2xl">AK</AvatarFallback>
+                <AvatarFallback className="text-2xl">
+                  {employee.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
               </Avatar>
               <div className="space-y-1">
                 <h2 className="text-xl font-semibold">{employee.name}</h2>
@@ -90,21 +109,21 @@ export default function EmployeeDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Your Team
+                Your Company
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Manager</p>
-                  <p className="font-medium">{employee.manager}</p>
+                  <p className="text-sm text-muted-foreground">Company</p>
+                  <p className="font-medium">{employee.companyName}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Department</p>
                   <p className="font-medium">{employee.department}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Start Date</p>
+                  <p className="text-sm text-muted-foreground">Joined</p>
                   <p className="font-medium">
                     {new Date(employee.startDate).toLocaleDateString('en-US', {
                       year: 'numeric',
