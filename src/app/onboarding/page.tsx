@@ -67,7 +67,7 @@ export default function OnboardingPage() {
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Check if user already completed onboarding
+  // Check if user already completed onboarding or is a founder
   useEffect(() => {
     const checkOnboarding = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -82,9 +82,15 @@ export default function OnboardingPage() {
         .eq('id', user.id)
         .single()
 
+      // Founders skip onboarding entirely
+      if (profile?.role === 'founder') {
+        router.push('/dashboard')
+        return
+      }
+
+      // Already completed onboarding
       if (profile?.onboarding_completed) {
-        // Already completed, redirect to appropriate dashboard
-        router.push(profile.role === 'founder' ? '/dashboard' : '/employee')
+        router.push('/employee')
         return
       }
 
