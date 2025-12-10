@@ -73,6 +73,14 @@ export default function SignUpPage() {
       return
     }
 
+    // Check if we have a session (email confirmation disabled = auto session)
+    if (!data.session) {
+      // No session means email confirmation is still enabled or something went wrong
+      setError('Please check your email to confirm your account, then log in.')
+      setLoading(false)
+      return
+    }
+
     if (data.user) {
       let orgId = role === 'founder' ? crypto.randomUUID() : selectedOrgId
 
