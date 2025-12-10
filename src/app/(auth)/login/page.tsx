@@ -50,11 +50,24 @@ export default function LoginPage() {
       .eq('id', authUser.id)
       .single()
 
-    console.log('Login profile lookup:', { profile, profileError })
+    console.log('Login debug:', {
+      authUserId: authUser.id,
+      authUserEmail: authUser.email,
+      profile,
+      profileError
+    })
 
-    if (profile?.role === 'founder') {
+    // If no profile found, something went wrong during signup
+    if (!profile) {
+      console.error('No profile found for user:', authUser.id)
+      setError('Profile not found. Please sign up again.')
+      setLoading(false)
+      return
+    }
+
+    if (profile.role === 'founder') {
       router.push('/dashboard')
-    } else if (!profile?.onboarding_completed) {
+    } else if (!profile.onboarding_completed) {
       router.push('/onboarding')
     } else {
       router.push('/employee')
