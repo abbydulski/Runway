@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { CheckCircle2, Circle, User, Building2, Wrench, Users } from 'lucide-react'
 import Image from 'next/image'
+import { createClient } from '@/lib/supabase/client'
 
 const onboardingSteps = [
   {
@@ -62,8 +63,35 @@ const onboardingSteps = [
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const supabase = createClient()
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
-  const [currentStep, setCurrentStep] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  // Check if user already completed onboarding
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('onboarding_completed, role')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.onboarding_completed) {
+        // Already completed, redirect to appropriate dashboard
+        router.push(profile.role === 'founder' ? '/dashboard' : '/employee')
+        return
+      }
+
+      setLoading(false)
+    }
+    checkOnboarding()
+  }, [router, supabase])
 
   const progress = (completedSteps.length / onboardingSteps.length) * 100
 
@@ -75,7 +103,15 @@ export default function OnboardingPage() {
     }
   }
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    // Mark onboarding as complete in database
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase
+        .from('users')
+        .update({ onboarding_completed: true })
+        .eq('id', user.id)
+    }
     router.push('/employee')
   }
 
@@ -83,8 +119,16 @@ export default function OnboardingPage() {
     .filter((s) => s.required)
     .every((s) => completedSteps.includes(s.id))
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-muted/30">
       {/* Header */}
       <header className="border-b bg-white">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">

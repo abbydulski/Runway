@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -12,20 +12,52 @@ import { Building2, User } from 'lucide-react'
 import Image from 'next/image'
 import { UserRole } from '@/types'
 
+type Organization = {
+  id: string
+  name: string
+}
+
 export default function SignUpPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<UserRole>('employee')
+  const [companyName, setCompanyName] = useState('')
+  const [selectedOrgId, setSelectedOrgId] = useState('')
+  const [organizations, setOrganizations] = useState<Organization[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
+  // Fetch organizations for employee dropdown
+  useEffect(() => {
+    const fetchOrgs = async () => {
+      const { data } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .order('name')
+      if (data) setOrganizations(data)
+    }
+    fetchOrgs()
+  }, [supabase])
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    // Validation
+    if (role === 'founder' && !companyName.trim()) {
+      setError('Please enter your company name')
+      setLoading(false)
+      return
+    }
+    if (role === 'employee' && !selectedOrgId) {
+      setError('Please select your company')
+      setLoading(false)
+      return
+    }
 
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
@@ -42,31 +74,34 @@ export default function SignUpPage() {
     }
 
     if (data.user) {
+      let orgId = role === 'founder' ? crypto.randomUUID() : selectedOrgId
+
+      // For founders, create the organization first
+      if (role === 'founder') {
+        const { error: orgError } = await supabase.from('organizations').insert({
+          id: orgId,
+          name: companyName.trim(),
+          founder_id: data.user.id,
+          created_at: new Date().toISOString(),
+        })
+        if (orgError) {
+          console.error('Org creation error:', orgError)
+        }
+      }
+
       // Create user profile
-      const orgId = role === 'founder' ? crypto.randomUUID() : null
-      
       const { error: profileError } = await supabase.from('users').insert({
         id: data.user.id,
         email,
         name,
         role,
         organization_id: orgId,
-        onboarding_completed: false,
+        onboarding_completed: role === 'founder', // Founders skip onboarding
         created_at: new Date().toISOString(),
       })
 
       if (profileError) {
         console.error('Profile creation error:', profileError)
-      }
-
-      if (role === 'founder' && orgId) {
-        // Create organization for founder
-        await supabase.from('organizations').insert({
-          id: orgId,
-          name: `${name}'s Company`,
-          founder_id: data.user.id,
-          created_at: new Date().toISOString(),
-        })
       }
     }
 
@@ -140,6 +175,48 @@ export default function SignUpPage() {
                 required
               />
             </div>
+
+            {/* Founder: Company Name */}
+            {role === 'founder' && (
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input
+                  id="companyName"
+                  type="text"
+                  placeholder="Acme Inc."
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+
+            {/* Employee: Select Company */}
+            {role === 'employee' && (
+              <div className="space-y-2">
+                <Label htmlFor="organization">Select Your Company</Label>
+                <select
+                  id="organization"
+                  value={selectedOrgId}
+                  onChange={(e) => setSelectedOrgId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  required
+                >
+                  <option value="">Choose a company...</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+                {organizations.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No companies registered yet. Ask your founder to sign up first.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

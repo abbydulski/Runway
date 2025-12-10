@@ -2,11 +2,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { getDeelData } from '@/lib/mock-data'
-import { Users, UserPlus, Globe, Briefcase, DollarSign } from 'lucide-react'
+import { Users, UserPlus, Globe, Briefcase } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+
+type TeamMember = {
+  id: string
+  name: string
+  email: string
+  role: string
+  position: string | null
+  department: string | null
+  avatar_url: string | null
+  onboarding_completed: boolean
+  created_at: string
+}
 
 export default async function TeamPage() {
-  const { employees, stats } = await getDeelData()
+  const supabase = await createClient()
+
+  // Get current user's organization
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: currentUser } = await supabase
+    .from('users')
+    .select('organization_id')
+    .eq('id', user?.id)
+    .single()
+
+  // Fetch team members from the same organization
+  const { data: teamMembers } = await supabase
+    .from('users')
+    .select('*')
+    .eq('organization_id', currentUser?.organization_id)
+    .order('created_at', { ascending: true })
+
+  const members: TeamMember[] = teamMembers || []
+  const founders = members.filter(m => m.role === 'founder')
+  const employees = members.filter(m => m.role === 'employee')
 
   return (
     <div className="space-y-6">
@@ -25,41 +56,32 @@ export default async function TeamPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Team</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalEmployees}</div>
+            <div className="text-2xl font-bold">{members.length}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Full-Time</CardTitle>
+            <CardTitle className="text-sm font-medium">Founders</CardTitle>
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.fullTimeEmployees}</div>
+            <div className="text-2xl font-bold">{founders.length}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contractors</CardTitle>
+            <CardTitle className="text-sm font-medium">Employees</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.contractors}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Countries</CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.countriesCount}</div>
+            <div className="text-2xl font-bold">{employees.length}</div>
           </CardContent>
         </Card>
       </div>
@@ -68,64 +90,58 @@ export default async function TeamPage() {
       <Card>
         <CardHeader>
           <CardTitle>Team Members</CardTitle>
-          <CardDescription>All employees and contractors</CardDescription>
+          <CardDescription>Everyone in your organization</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {employees.map((employee) => (
-              <div
-                key={employee.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.name}`}
-                    />
-                    <AvatarFallback>
-                      {employee.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{employee.name}</p>
-                    <p className="text-sm text-muted-foreground">{employee.email}</p>
+          {members.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No team members yet. Share the signup link with your team!
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {members.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage
+                        src={member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`}
+                      />
+                      <AvatarFallback>
+                        {member.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{member.name}</p>
+                      <p className="text-sm text-muted-foreground">{member.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{member.position || 'No position set'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Joined {new Date(member.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge variant={member.role === 'founder' ? 'default' : 'secondary'}>
+                      {member.role === 'founder' ? 'Founder' : 'Employee'}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={member.onboarding_completed ? 'text-green-600 border-green-300' : 'text-yellow-600 border-yellow-300'}
+                    >
+                      {member.onboarding_completed ? 'Active' : 'Onboarding'}
+                    </Badge>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{employee.country}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Started {new Date(employee.start_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={employee.type === 'employee' ? 'default' : 'secondary'}
-                  >
-                    {employee.type === 'employee' ? 'Full-Time' : 'Contractor'}
-                  </Badge>
-                  <Badge
-                    variant={
-                      employee.status === 'active'
-                        ? 'outline'
-                        : employee.status === 'pending'
-                        ? 'secondary'
-                        : 'destructive'
-                    }
-                    className={
-                      employee.status === 'active'
-                        ? 'text-green-600 border-green-300'
-                        : ''
-                    }
-                  >
-                    {employee.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
