@@ -1,4 +1,5 @@
 import { MetricCard } from '@/components/dashboard/metric-card'
+import { RunwayChart, RevenueExpenseChart, TeamCompositionChart } from '@/components/dashboard/charts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -57,8 +58,18 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Secondary Metrics */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Charts Row */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <RunwayChart
+          data={data.quickbooks.pnl}
+          bankBalance={data.metrics.bankBalance}
+          monthlyBurn={data.metrics.monthlyBurn}
+        />
+        <RevenueExpenseChart data={data.quickbooks.pnl} />
+      </div>
+
+      {/* Secondary Metrics + Team Chart */}
+      <div className="grid gap-4 md:grid-cols-4">
         <MetricCard
           title="Active Projects"
           value={data.metrics.activeProjects}
@@ -73,6 +84,11 @@ export default async function DashboardPage() {
           title="Pending Onboarding"
           value={data.metrics.pendingOnboarding}
           icon={UserPlus}
+        />
+        <TeamCompositionChart
+          contractors={data.deel.stats.contractors}
+          fullTime={data.deel.stats.fullTimeEmployees}
+          pending={data.deel.stats.pendingOnboarding}
         />
       </div>
 

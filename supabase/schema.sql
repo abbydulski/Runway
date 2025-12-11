@@ -50,6 +50,18 @@ CREATE TABLE user_onboarding_progress (
   UNIQUE(user_id, step_id)
 );
 
+-- Invites table for team invitations
+CREATE TABLE invites (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT NOT NULL,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired')),
+  invited_by UUID REFERENCES users(id),
+  accepted_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(email, organization_id)
+);
+
 -- Row Level Security Policies
 
 -- Enable RLS
@@ -57,6 +69,7 @@ ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE onboarding_steps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_onboarding_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invites ENABLE ROW LEVEL SECURITY;
 
 -- Organizations: founders can manage their org, employees can view
 CREATE POLICY "Users can view their organization"
@@ -103,6 +116,39 @@ CREATE POLICY "Founders can view org progress"
       WHERE u.organization_id IN (
         SELECT organization_id FROM users WHERE id = auth.uid() AND role = 'founder'
       )
+    )
+  );
+
+-- Invites: founders can manage, anyone can view their own invite
+CREATE POLICY "Founders can view org invites"
+  ON invites FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM users WHERE id = auth.uid() AND role = 'founder'
+    )
+  );
+
+CREATE POLICY "Founders can create invites"
+  ON invites FOR INSERT
+  WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM users WHERE id = auth.uid() AND role = 'founder'
+    )
+  );
+
+CREATE POLICY "Founders can update invites"
+  ON invites FOR UPDATE
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM users WHERE id = auth.uid() AND role = 'founder'
+    )
+  );
+
+CREATE POLICY "Founders can delete invites"
+  ON invites FOR DELETE
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM users WHERE id = auth.uid() AND role = 'founder'
     )
   );
 

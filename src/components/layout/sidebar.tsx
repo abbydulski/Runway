@@ -24,6 +24,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Team', href: '/dashboard/team', icon: Users },
   { name: 'Org Chart', href: '/dashboard/org-chart', icon: Users },
+  { name: 'Invite', href: '/dashboard/invite', icon: UserPlus },
   { name: 'Onboarding', href: '/dashboard/onboarding', icon: UserPlus },
 ]
 
@@ -105,7 +106,12 @@ export function Sidebar() {
       <div className="border-t p-3 space-y-1">
         <Link
           href="/dashboard/settings"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            pathname === '/dashboard/settings'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          )}
         >
           <Settings className="h-5 w-5" />
           Settings
