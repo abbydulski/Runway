@@ -27,7 +27,7 @@ function buildOrgTree(members: TeamMember[]): OrgChartNode[] {
     name: founder.name,
     position: founder.position || 'Founder',
     department: founder.department || 'Leadership',
-    avatar_url: founder.avatar_url,
+    avatar_url: founder.avatar_url || undefined,
     manager_id: undefined,
     children: employees
       .filter(e => e.manager_id === founder.id || !e.manager_id)
@@ -36,8 +36,8 @@ function buildOrgTree(members: TeamMember[]): OrgChartNode[] {
         name: emp.name,
         position: emp.position || 'Team Member',
         department: emp.department || 'General',
-        avatar_url: emp.avatar_url,
-        manager_id: emp.manager_id,
+        avatar_url: emp.avatar_url || undefined,
+        manager_id: emp.manager_id || undefined,
         children: [],
       }))
   }))
