@@ -24,6 +24,8 @@ export default function SignUpPage() {
   const [role, setRole] = useState<UserRole>('employee')
   const [companyName, setCompanyName] = useState('')
   const [selectedOrgId, setSelectedOrgId] = useState('')
+  const [position, setPosition] = useState('')
+  const [department, setDepartment] = useState('')
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -55,6 +57,11 @@ export default function SignUpPage() {
     }
     if (role === 'employee' && !selectedOrgId) {
       setError('Please select your company')
+      setLoading(false)
+      return
+    }
+    if (role === 'employee' && !position.trim()) {
+      setError('Please enter your position/role')
       setLoading(false)
       return
     }
@@ -107,6 +114,8 @@ export default function SignUpPage() {
         name,
         role,
         organization_id: orgId,
+        position: role === 'employee' ? position.trim() : 'Founder',
+        department: role === 'employee' && department.trim() ? department.trim() : null,
         onboarding_completed: role === 'founder', // Founders skip onboarding
         created_at: new Date().toISOString(),
       })
@@ -208,28 +217,51 @@ export default function SignUpPage() {
 
             {/* Employee: Select Company */}
             {role === 'employee' && (
-              <div className="space-y-2">
-                <Label htmlFor="organization">Select Your Company</Label>
-                <select
-                  id="organization"
-                  value={selectedOrgId}
-                  onChange={(e) => setSelectedOrgId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                  required
-                >
-                  <option value="">Choose a company...</option>
-                  {organizations.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name}
-                    </option>
-                  ))}
-                </select>
-                {organizations.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    No companies registered yet. Ask your founder to sign up first.
-                  </p>
-                )}
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="organization">Select Your Company</Label>
+                  <select
+                    id="organization"
+                    value={selectedOrgId}
+                    onChange={(e) => setSelectedOrgId(e.target.value)}
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                    required
+                  >
+                    <option value="">Choose a company...</option>
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name}
+                      </option>
+                    ))}
+                  </select>
+                  {organizations.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No companies registered yet. Ask your founder to sign up first.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="position">Your Position/Role *</Label>
+                  <Input
+                    id="position"
+                    type="text"
+                    placeholder="e.g. Software Engineer, Product Manager"
+                    value={position}
+                    onChange={(e) => setPosition(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department (optional)</Label>
+                  <Input
+                    id="department"
+                    type="text"
+                    placeholder="e.g. Engineering, Marketing, Sales"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                  />
+                </div>
+              </>
             )}
 
             <div className="space-y-2">
