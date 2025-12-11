@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getDeelData } from '@/lib/mock-data'
 import { Briefcase, Users, Globe, DollarSign, Clock } from 'lucide-react'
+import { DEFAULT_AVATAR } from '@/lib/utils'
 
 export default async function DeelPage() {
   const { employees, payroll, stats } = await getDeelData()
@@ -75,7 +76,7 @@ export default async function DeelPage() {
               {employees.map((employee) => (
                 <div key={employee.id} className="flex items-center gap-4 p-3 border rounded-lg">
                   <Avatar>
-                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.name}`} />
+                    <AvatarImage src={DEFAULT_AVATAR} />
                     <AvatarFallback>{employee.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">

@@ -5,12 +5,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Settings, User, Building2 } from 'lucide-react'
 import { SettingsForm } from './settings-form'
+import { getAvatarUrl } from '@/lib/utils'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
 
   const { data: { user: authUser } } = await supabase.auth.getUser()
-  
+
   if (!authUser) {
     redirect('/login')
   }
@@ -26,7 +27,7 @@ export default async function SettingsPage() {
   }
 
   const initials = profile.name?.split(' ').map((n: string) => n[0]).join('') || 'U'
-  const avatarUrl = profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.name}`
+  const avatarUrl = getAvatarUrl(profile.avatar_url)
 
   return (
     <div className="space-y-6 max-w-4xl">

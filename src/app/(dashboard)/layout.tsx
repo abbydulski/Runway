@@ -2,6 +2,7 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getAvatarUrl } from '@/lib/utils'
 
 export default async function DashboardLayout({
   children,
@@ -36,7 +37,7 @@ export default async function DashboardLayout({
         <Header
           userName={profile?.name || 'User'}
           userEmail={profile?.email || authUser.email || ''}
-          userAvatar={profile?.avatar_url || undefined}
+          userAvatar={getAvatarUrl(profile?.avatar_url)}
         />
         <main className="flex-1 overflow-auto p-6">
           {children}

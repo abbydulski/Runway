@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Users, UserPlus, Globe, Briefcase } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { getAvatarUrl } from '@/lib/utils'
 
 type TeamMember = {
   id: string
@@ -107,7 +108,7 @@ export default async function TeamPage() {
                   <div className="flex items-center gap-4">
                     <Avatar className="h-12 w-12">
                       <AvatarImage
-                        src={member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`}
+                        src={getAvatarUrl(member.avatar_url)}
                       />
                       <AvatarFallback>
                         {member.name

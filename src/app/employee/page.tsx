@@ -6,6 +6,7 @@ import { User, Users, Calendar, FileText, DollarSign, LogOut } from 'lucide-reac
 import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { getAvatarUrl } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function EmployeeDashboard() {
@@ -37,7 +38,7 @@ export default async function EmployeeDashboard() {
     department: profile?.department || 'Not set',
     companyName: profile?.organizations?.name || 'Your Company',
     startDate: profile?.created_at || new Date().toISOString(),
-    avatar: profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.name || 'user'}`,
+    avatar: getAvatarUrl(profile?.avatar_url),
   }
 
   return (

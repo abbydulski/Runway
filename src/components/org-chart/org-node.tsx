@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { cn } from '@/lib/utils'
+import { cn, getAvatarUrl } from '@/lib/utils'
 import { Mail, Building2, User, Users } from 'lucide-react'
 
 interface OrgNodeProps {
@@ -27,7 +27,7 @@ export function OrgNode({ node, isRoot = false, email }: OrgNodeProps) {
     .join('')
     .toUpperCase()
 
-  const avatarUrl = node.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${node.name}`
+  const avatarUrl = getAvatarUrl(node.avatar_url)
 
   return (
     <div className="flex flex-col items-center">
