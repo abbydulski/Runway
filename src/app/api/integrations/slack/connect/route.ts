@@ -26,12 +26,12 @@ export async function GET() {
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/slack/callback`
   const scopes = [
     'channels:read',
-    'channels:write',
+    'channels:write.invites',
+    'chat:write',
     'users:read',
     'users:read.email',
-    'users:write',
-    'admin.users:write', // For inviting users
-    'team:read',
+    'groups:read',
+    'groups:write',
   ].join(',')
 
   // Store org_id in state for callback
