@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Building2, User } from 'lucide-react'
+import { Building2, User, CheckCircle, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { UserRole } from '@/types'
 
@@ -17,7 +17,30 @@ type Organization = {
   name: string
 }
 
+type InviteData = {
+  id: string
+  email: string
+  organization_id: string
+  team_id: string | null
+  manager_id: string | null
+  position: string | null
+  organizations: { name: string }
+  teams: { name: string } | null
+}
+
 export default function SignUpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <SignUpForm />
+    </Suspense>
+  )
+}
+
+function SignUpForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -26,11 +49,50 @@ export default function SignUpPage() {
   const [selectedOrgId, setSelectedOrgId] = useState('')
   const [position, setPosition] = useState('')
   const [department, setDepartment] = useState('')
+  const [teamId, setTeamId] = useState<string | null>(null)
+  const [managerId, setManagerId] = useState<string | null>(null)
   const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [invite, setInvite] = useState<InviteData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingInvite, setLoadingInvite] = useState(true)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Check for invite token
+  useEffect(() => {
+    const checkInvite = async () => {
+      const token = searchParams.get('token')
+      const orgParam = searchParams.get('org')
+
+      if (token) {
+        const { data: inviteData } = await supabase
+          .from('invites')
+          .select('*, organizations(name), teams(name)')
+          .eq('invite_token', token)
+          .eq('status', 'pending')
+          .single()
+
+        if (inviteData) {
+          setInvite(inviteData)
+          setEmail(inviteData.email)
+          setSelectedOrgId(inviteData.organization_id)
+          setTeamId(inviteData.team_id)
+          setManagerId(inviteData.manager_id)
+          if (inviteData.position) setPosition(inviteData.position)
+          setRole('employee')
+        }
+      } else if (orgParam) {
+        setSelectedOrgId(orgParam)
+        setRole('employee')
+      }
+
+      setLoadingInvite(false)
+    }
+
+    checkInvite()
+  }, [searchParams, supabase])
 
   // Fetch organizations for employee dropdown
   useEffect(() => {
@@ -89,16 +151,19 @@ export default function SignUpPage() {
     }
 
     if (data.user) {
+      console.log('DEBUG: Auth user created:', data.user.id)
       let orgId = role === 'founder' ? crypto.randomUUID() : selectedOrgId
 
       // For founders, create the organization first
       if (role === 'founder') {
-        const { error: orgError } = await supabase.from('organizations').insert({
+        console.log('DEBUG: Creating org with id:', orgId)
+        const { data: orgData, error: orgError } = await supabase.from('organizations').insert({
           id: orgId,
           name: companyName.trim(),
           founder_id: data.user.id,
           created_at: new Date().toISOString(),
-        })
+        }).select()
+        console.log('DEBUG: Org insert result:', { orgData, orgError })
         if (orgError) {
           console.error('Org creation error:', orgError)
           setError(`Failed to create organization: ${orgError.message}`)
@@ -108,7 +173,8 @@ export default function SignUpPage() {
       }
 
       // Create user profile
-      const { error: profileError } = await supabase.from('users').insert({
+      console.log('DEBUG: Creating user profile')
+      const { data: profileData, error: profileError } = await supabase.from('users').insert({
         id: data.user.id,
         email,
         name,
@@ -116,15 +182,45 @@ export default function SignUpPage() {
         organization_id: orgId,
         position: role === 'employee' ? position.trim() : 'Founder',
         department: role === 'employee' && department.trim() ? department.trim() : null,
+        team_id: teamId,
+        manager_id: managerId,
         onboarding_completed: role === 'founder', // Founders skip onboarding
         created_at: new Date().toISOString(),
-      })
+      }).select()
+      console.log('DEBUG: Profile insert result:', { profileData, profileError })
 
       if (profileError) {
         console.error('Profile creation error:', profileError)
         setError(`Failed to create profile: ${profileError.message}`)
         setLoading(false)
         return
+      }
+
+      // If signing up via invite, mark it as accepted
+      if (invite) {
+        await supabase
+          .from('invites')
+          .update({
+            status: 'accepted',
+            accepted_at: new Date().toISOString()
+          })
+          .eq('id', invite.id)
+
+        // Trigger provisioning (call API to provision integrations)
+        try {
+          await fetch('/api/provisioning/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: data.user.id,
+              organization_id: orgId,
+              team_id: teamId,
+            }),
+          })
+        } catch (e) {
+          console.error('Provisioning trigger failed:', e)
+          // Don't block signup if provisioning fails
+        }
       }
 
       // Success - redirect based on role
@@ -154,39 +250,56 @@ export default function SignUpPage() {
                 {error}
               </div>
             )}
-            
-            {/* Role Selection */}
-            <div className="space-y-2">
-              <Label>I am a...</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole('founder')}
-                  className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${
-                    role === 'founder' 
-                      ? 'border-primary bg-primary/10' 
-                      : 'border-muted hover:border-primary/50'
-                  }`}
-                >
-                  <Building2 className="h-6 w-6" />
-                  <span className="font-medium">Founder</span>
-                  <span className="text-xs text-muted-foreground">Full access</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('employee')}
-                  className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${
-                    role === 'employee' 
-                      ? 'border-primary bg-primary/10' 
-                      : 'border-muted hover:border-primary/50'
-                  }`}
-                >
-                  <User className="h-6 w-6" />
-                  <span className="font-medium">Employee</span>
-                  <span className="text-xs text-muted-foreground">Team member</span>
-                </button>
+
+            {/* Show invite info if signing up via invite */}
+            {invite && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-green-800 mb-2">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="font-medium">You&apos;ve been invited!</span>
+                </div>
+                <p className="text-sm text-green-700">
+                  Join <strong>{invite.organizations?.name}</strong>
+                  {invite.teams?.name && <> as part of the <strong>{invite.teams.name}</strong> team</>}
+                  {invite.position && <> as <strong>{invite.position}</strong></>}
+                </p>
               </div>
-            </div>
+            )}
+
+            {/* Role Selection - only show if not from invite */}
+            {!invite && (
+              <div className="space-y-2">
+                <Label>I am a...</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole('founder')}
+                    className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${
+                      role === 'founder'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-muted hover:border-primary/50'
+                    }`}
+                  >
+                    <Building2 className="h-6 w-6" />
+                    <span className="font-medium">Founder</span>
+                    <span className="text-xs text-muted-foreground">Full access</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole('employee')}
+                    className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${
+                      role === 'employee'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-muted hover:border-primary/50'
+                    }`}
+                  >
+                    <User className="h-6 w-6" />
+                    <span className="font-medium">Employee</span>
+                    <span className="text-xs text-muted-foreground">Team member</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
@@ -215,31 +328,33 @@ export default function SignUpPage() {
               </div>
             )}
 
-            {/* Employee: Select Company */}
+            {/* Employee: Select Company - only show if not from invite */}
             {role === 'employee' && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="organization">Select Your Company</Label>
-                  <select
-                    id="organization"
-                    value={selectedOrgId}
-                    onChange={(e) => setSelectedOrgId(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                    required
-                  >
-                    <option value="">Choose a company...</option>
-                    {organizations.map((org) => (
-                      <option key={org.id} value={org.id}>
-                        {org.name}
-                      </option>
-                    ))}
-                  </select>
-                  {organizations.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      No companies registered yet. Ask your founder to sign up first.
-                    </p>
-                  )}
-                </div>
+                {!invite && (
+                  <div className="space-y-2">
+                    <Label htmlFor="organization">Select Your Company</Label>
+                    <select
+                      id="organization"
+                      value={selectedOrgId}
+                      onChange={(e) => setSelectedOrgId(e.target.value)}
+                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                      required
+                    >
+                      <option value="">Choose a company...</option>
+                      {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>
+                          {org.name}
+                        </option>
+                      ))}
+                    </select>
+                    {organizations.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        No companies registered yet. Ask your founder to sign up first.
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="position">Your Position/Role *</Label>
                   <Input
@@ -249,6 +364,7 @@ export default function SignUpPage() {
                     value={position}
                     onChange={(e) => setPosition(e.target.value)}
                     required
+                    disabled={!!invite?.position}
                   />
                 </div>
                 <div className="space-y-2">

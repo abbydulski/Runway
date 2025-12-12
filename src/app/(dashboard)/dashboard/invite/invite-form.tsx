@@ -5,14 +5,30 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Send, Check } from 'lucide-react'
+import { Loader2, Send, Check, AlertCircle } from 'lucide-react'
+
+interface Team {
+  id: string
+  name: string
+}
+
+interface Employee {
+  id: string
+  name: string
+  position?: string
+}
 
 interface InviteFormProps {
   organizationId: string
+  teams: Team[]
+  employees: Employee[]
 }
 
-export function InviteForm({ organizationId }: InviteFormProps) {
+export function InviteForm({ organizationId, teams, employees }: InviteFormProps) {
   const [email, setEmail] = useState('')
+  const [position, setPosition] = useState('')
+  const [teamId, setTeamId] = useState('')
+  const [managerId, setManagerId] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSent, setIsSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -22,6 +38,12 @@ export function InviteForm({ organizationId }: InviteFormProps) {
     setIsLoading(true)
     setError(null)
     setIsSent(false)
+
+    if (!teamId) {
+      setError('Please select a team')
+      setIsLoading(false)
+      return
+    }
 
     const supabase = createClient()
 
@@ -39,13 +61,20 @@ export function InviteForm({ organizationId }: InviteFormProps) {
       return
     }
 
-    // Create invite
+    // Generate unique invite token
+    const inviteToken = crypto.randomUUID()
+
+    // Create invite with team and manager info
     const { error: insertError } = await supabase
       .from('invites')
       .insert({
         email: email.toLowerCase(),
         organization_id: organizationId,
+        team_id: teamId,
+        manager_id: managerId || null,
+        position: position || null,
         status: 'pending',
+        invite_token: inviteToken,
       })
 
     setIsLoading(false)
@@ -55,15 +84,25 @@ export function InviteForm({ organizationId }: InviteFormProps) {
     } else {
       setIsSent(true)
       setEmail('')
+      setPosition('')
+      setTeamId('')
+      setManagerId('')
       setTimeout(() => setIsSent(false), 3000)
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email Address</Label>
-        <div className="flex gap-2">
+      {teams.length === 0 && (
+        <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-800 rounded-lg text-sm">
+          <AlertCircle className="h-4 w-4" />
+          <span>You need to <a href="/dashboard/teams" className="underline font-medium">create a team</a> before inviting employees.</span>
+        </div>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email Address *</Label>
           <Input
             id="email"
             type="email"
@@ -72,28 +111,66 @@ export function InviteForm({ organizationId }: InviteFormProps) {
             placeholder="colleague@company.com"
             required
           />
-          <Button type="submit" disabled={isLoading || !email}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending...
-              </>
-            ) : isSent ? (
-              <>
-                <Check className="mr-2 h-4 w-4" />
-                Sent!
-              </>
-            ) : (
-              <>
-                <Send className="mr-2 h-4 w-4" />
-                Send Invite
-              </>
-            )}
-          </Button>
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="position">Position/Role</Label>
+          <Input
+            id="position"
+            type="text"
+            value={position}
+            onChange={(e) => setPosition(e.target.value)}
+            placeholder="e.g. Software Engineer"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="team">Team *</Label>
+          <select
+            id="team"
+            value={teamId}
+            onChange={(e) => setTeamId(e.target.value)}
+            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+            required
+          >
+            <option value="">Select a team...</option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>{team.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="manager">Reports To</Label>
+          <select
+            id="manager"
+            value={managerId}
+            onChange={(e) => setManagerId(e.target.value)}
+            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+          >
+            <option value="">Select manager (optional)...</option>
+            {employees.map((emp) => (
+              <option key={emp.id} value={emp.id}>
+                {emp.name}{emp.position ? ` - ${emp.position}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Note: In this demo, no actual email is sent. The invite is recorded and the user can sign up using the invite link.
+          The employee will be automatically added to team integrations (Slack, GitHub, etc.)
         </p>
+        <Button type="submit" disabled={isLoading || !email || !teamId || teams.length === 0}>
+          {isLoading ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
+          ) : isSent ? (
+            <><Check className="mr-2 h-4 w-4" /> Sent!</>
+          ) : (
+            <><Send className="mr-2 h-4 w-4" /> Send Invite</>
+          )}
+        </Button>
       </div>
 
       {error && (

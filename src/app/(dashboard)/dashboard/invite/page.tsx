@@ -2,15 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { UserPlus, Link as LinkIcon, Copy, Mail } from 'lucide-react'
+import { UserPlus, Mail } from 'lucide-react'
 import { InviteForm } from './invite-form'
 import { InviteLinkCard } from './invite-link-card'
+import { PendingInvites } from './pending-invites'
 
 export default async function InvitePage() {
   const supabase = await createClient()
 
   const { data: { user: authUser } } = await supabase.auth.getUser()
-  
+
   if (!authUser) {
     redirect('/login')
   }
@@ -25,10 +26,24 @@ export default async function InvitePage() {
     redirect('/dashboard')
   }
 
-  // Get pending invites
+  // Get teams
+  const { data: teams } = await supabase
+    .from('teams')
+    .select('id, name')
+    .eq('organization_id', profile.organization_id)
+    .order('name')
+
+  // Get employees for manager selection
+  const { data: employees } = await supabase
+    .from('users')
+    .select('id, name, position')
+    .eq('organization_id', profile.organization_id)
+    .order('name')
+
+  // Get pending invites with team info
   const { data: invites } = await supabase
     .from('invites')
-    .select('*')
+    .select('*, teams(name)')
     .eq('organization_id', profile.organization_id)
     .order('created_at', { ascending: false })
 
@@ -67,36 +82,16 @@ export default async function InvitePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <InviteForm organizationId={profile.organization_id} />
+          <InviteForm
+            organizationId={profile.organization_id}
+            teams={teams || []}
+            employees={employees || []}
+          />
         </CardContent>
       </Card>
 
       {/* Pending Invites */}
-      {pendingInvites.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending Invites</CardTitle>
-            <CardDescription>
-              Invites that haven&apos;t been accepted yet
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {pendingInvites.map((invite) => (
-                <div key={invite.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{invite.email}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Sent {new Date(invite.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Badge variant="outline">Pending</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <PendingInvites invites={pendingInvites} />
 
       {/* Accepted Invites */}
       {acceptedInvites.length > 0 && (
