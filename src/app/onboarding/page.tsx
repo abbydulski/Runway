@@ -140,8 +140,8 @@ export default function OnboardingPage() {
       <header className="border-b bg-white">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="Runway" width={24} height={24} />
-            <span className="text-xl font-bold">Runway</span>
+            <Image src="/logo.svg" alt="ASC" width={24} height={24} />
+            <span className="text-xl font-bold">ASC</span>
           </div>
           <Badge variant="outline">Onboarding</Badge>
         </div>

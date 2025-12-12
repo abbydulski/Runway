@@ -52,8 +52,8 @@ export function Sidebar() {
     <div className="flex h-full w-64 flex-col border-r bg-white">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 px-6 border-b">
-        <Image src="/logo.svg" alt="Runway" width={32} height={32} />
-        <span className="text-xl font-bold">Runway</span>
+        <Image src="/logo.svg" alt="ASC" width={32} height={32} />
+        <span className="text-xl font-bold">ASC</span>
       </div>
 
       {/* Navigation */}

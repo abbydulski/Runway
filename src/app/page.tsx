@@ -10,8 +10,8 @@ export default function Home() {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="Runway" width={32} height={32} />
-            <span className="text-xl font-bold">Runway</span>
+            <Image src="/logo.svg" alt="ASC" width={32} height={32} />
+            <span className="text-xl font-bold">ASC</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/login">
@@ -82,7 +82,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t mt-24">
         <div className="container mx-auto px-4 py-8 text-center text-muted-foreground">
-          <p>&copy; 2024 Runway. Built for early-stage startups.</p>
+          <p>&copy; 2024 ASC. Built for early-stage startups.</p>
         </div>
       </footer>
     </div>

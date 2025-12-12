@@ -13,13 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Runway - Startup Operations Dashboard",
+  title: "ASC - Startup Operations Dashboard",
   description: "All-in-one dashboard for startup founders to manage their company operations",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Runway",
+    title: "ASC",
   },
   formatDetection: {
     telephone: false,
