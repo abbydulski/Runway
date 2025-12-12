@@ -200,6 +200,7 @@ export interface Integration {
   refresh_token?: string
   token_expires_at?: string
   provider_data: Record<string, unknown>
+  config?: Record<string, unknown>
   is_active: boolean
   connected_at: string
   connected_by: string
