@@ -11,6 +11,7 @@ export interface User {
   position?: string
   department?: string
   manager_id?: string
+  team_id?: string
   onboarding_completed: boolean
   created_at: string
 }
@@ -160,5 +161,77 @@ export interface DashboardMetrics {
   activeProjects: number
   openPRs: number
   pendingOnboarding: number
+}
+
+// Teams
+export interface Team {
+  id: string
+  organization_id: string
+  name: string
+  description?: string
+  slack_config: SlackTeamConfig
+  github_config: GitHubTeamConfig
+  deel_config: DeelTeamConfig
+  created_at: string
+  updated_at: string
+}
+
+export interface SlackTeamConfig {
+  channels: string[]
+}
+
+export interface GitHubTeamConfig {
+  teams: string[]
+}
+
+export interface DeelTeamConfig {
+  contract_type: 'contractor' | 'employee'
+  payment_schedule: 'weekly' | 'biweekly' | 'monthly'
+}
+
+// Integrations
+export type IntegrationProvider = 'slack' | 'github' | 'deel' | 'quickbooks' | 'google_workspace' | 'notion' | 'linear'
+
+export interface Integration {
+  id: string
+  organization_id: string
+  provider: IntegrationProvider
+  access_token?: string
+  refresh_token?: string
+  token_expires_at?: string
+  provider_data: Record<string, unknown>
+  is_active: boolean
+  connected_at: string
+  connected_by: string
+}
+
+// Invites (updated)
+export interface Invite {
+  id: string
+  email: string
+  organization_id: string
+  team_id?: string
+  manager_id?: string
+  position?: string
+  status: 'pending' | 'accepted' | 'expired'
+  invite_token: string
+  invited_by: string
+  accepted_at?: string
+  created_at: string
+}
+
+// Provisioning Logs
+export type ProvisioningStatus = 'pending' | 'success' | 'failed'
+
+export interface ProvisioningLog {
+  id: string
+  user_id: string
+  organization_id: string
+  provider: IntegrationProvider
+  action: string
+  status: ProvisioningStatus
+  error_message?: string
+  provider_response?: Record<string, unknown>
+  created_at: string
 }
 
