@@ -113,15 +113,116 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Placeholder functions - will be implemented with actual API calls
+// Slack provisioning - looks up user by email and adds to channels
 async function provisionSlack(
   integration: { access_token?: string },
   user: { email: string; name: string },
   teamConfig: { slack_config?: { channels?: string[] } }
-) {
-  // TODO: Implement Slack invitation
-  console.log('Would invite to Slack:', user.email, teamConfig.slack_config?.channels)
-  return { provider: 'slack', status: 'pending_implementation' }
+): Promise<{ provider: string; status: string; details?: unknown; error?: string }> {
+  const accessToken = integration.access_token
+  if (!accessToken) {
+    return { provider: 'slack', status: 'error', error: 'No access token' }
+  }
+
+  const channels = teamConfig.slack_config?.channels || []
+  if (channels.length === 0) {
+    return { provider: 'slack', status: 'skipped', details: 'No channels configured' }
+  }
+
+  try {
+    // Step 1: Look up user by email in Slack
+    const userLookupRes = await fetch(
+      `https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent(user.email)}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    )
+    const userLookup = await userLookupRes.json()
+
+    if (!userLookup.ok) {
+      return {
+        provider: 'slack',
+        status: 'error',
+        error: `User not found in Slack: ${userLookup.error}`,
+      }
+    }
+
+    const slackUserId = userLookup.user.id
+    const addedChannels: string[] = []
+    const failedChannels: { channel: string; error: string }[] = []
+
+    // Step 2: Get list of channels to find IDs
+    const channelsListRes = await fetch(
+      'https://slack.com/api/conversations.list?types=public_channel,private_channel&limit=200',
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    )
+    const channelsList = await channelsListRes.json()
+
+    if (!channelsList.ok) {
+      return {
+        provider: 'slack',
+        status: 'error',
+        error: `Failed to list channels: ${channelsList.error}`,
+      }
+    }
+
+    // Create a map of channel names to IDs
+    const channelMap: Record<string, string> = {}
+    for (const ch of channelsList.channels || []) {
+      channelMap[ch.name] = ch.id
+    }
+
+    // Step 3: Add user to each configured channel
+    for (const channelName of channels) {
+      // Remove # prefix if present
+      const cleanName = channelName.replace(/^#/, '')
+      const channelId = channelMap[cleanName]
+
+      if (!channelId) {
+        failedChannels.push({ channel: cleanName, error: 'Channel not found' })
+        continue
+      }
+
+      const inviteRes = await fetch('https://slack.com/api/conversations.invite', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channel: channelId,
+          users: slackUserId,
+        }),
+      })
+      const inviteResult = await inviteRes.json()
+
+      if (inviteResult.ok) {
+        addedChannels.push(cleanName)
+      } else if (inviteResult.error === 'already_in_channel') {
+        addedChannels.push(cleanName) // Count as success
+      } else {
+        failedChannels.push({ channel: cleanName, error: inviteResult.error })
+      }
+    }
+
+    return {
+      provider: 'slack',
+      status: failedChannels.length === 0 ? 'success' : 'partial',
+      details: {
+        slackUserId,
+        addedChannels,
+        failedChannels,
+      },
+    }
+  } catch (error) {
+    return {
+      provider: 'slack',
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
 }
 
 async function provisionGitHub(

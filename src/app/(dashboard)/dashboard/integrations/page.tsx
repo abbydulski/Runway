@@ -6,7 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Check, ExternalLink, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Check, ExternalLink, Loader2, AlertCircle, CheckCircle, Save } from 'lucide-react'
 import type { Integration, IntegrationProvider } from '@/types'
 
 interface IntegrationConfig {
@@ -66,6 +68,8 @@ function IntegrationsContent() {
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [slackInviteLink, setSlackInviteLink] = useState('')
+  const [savingSlackLink, setSavingSlackLink] = useState(false)
   const supabase = createClient()
   const searchParams = useSearchParams()
 
@@ -98,11 +102,37 @@ function IntegrationsContent() {
     const { data, error } = await supabase
       .from('integrations')
       .select('*')
-    
+
     if (!error && data) {
       setIntegrations(data)
+      // Load Slack invite link if exists
+      const slackIntegration = data.find(i => i.provider === 'slack')
+      if (slackIntegration?.config?.invite_link) {
+        setSlackInviteLink(slackIntegration.config.invite_link)
+      }
     }
     setLoading(false)
+  }
+
+  async function saveSlackInviteLink() {
+    const slackIntegration = integrations.find(i => i.provider === 'slack')
+    if (!slackIntegration) return
+
+    setSavingSlackLink(true)
+    const { error } = await supabase
+      .from('integrations')
+      .update({
+        config: { ...slackIntegration.config, invite_link: slackInviteLink }
+      })
+      .eq('id', slackIntegration.id)
+
+    if (!error) {
+      setMessage({ type: 'success', text: 'Slack invite link saved!' })
+      fetchIntegrations()
+    } else {
+      setMessage({ type: 'error', text: 'Failed to save invite link' })
+    }
+    setSavingSlackLink(false)
   }
 
   function isConnected(provider: IntegrationProvider): boolean {
@@ -210,6 +240,39 @@ function IntegrationsContent() {
                   <p className="text-xs text-muted-foreground mt-3">
                     Connected {new Date(integration.connected_at).toLocaleDateString()}
                   </p>
+                )}
+                {/* Slack invite link input */}
+                {connected && config.provider === 'slack' && (
+                  <div className="mt-4 pt-4 border-t space-y-3">
+                    <div>
+                      <Label htmlFor="slack-invite-link" className="text-sm font-medium">
+                        Workspace Invite Link
+                      </Label>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Get this from Slack: Settings → Invite People → Copy Link
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          id="slack-invite-link"
+                          placeholder="https://join.slack.com/t/your-workspace/..."
+                          value={slackInviteLink}
+                          onChange={(e) => setSlackInviteLink(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={saveSlackInviteLink}
+                          disabled={savingSlackLink || !slackInviteLink}
+                        >
+                          {savingSlackLink ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <><Save className="h-4 w-4 mr-1" /> Save</>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
