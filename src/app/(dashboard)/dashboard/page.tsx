@@ -12,11 +12,39 @@ import {
   FolderGit2,
   UserPlus,
   Clock,
+  Link2,
+  CheckCircle,
 } from 'lucide-react'
 import { getAllDashboardData } from '@/lib/mock-data'
+import { createClient } from '@/lib/supabase/server'
 
 export default async function DashboardPage() {
   const data = await getAllDashboardData()
+  const supabase = await createClient()
+
+  // Get real stats from database
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: currentUser } = await supabase
+    .from('users')
+    .select('organization_id, organizations(name)')
+    .eq('id', user?.id)
+    .single()
+
+  const orgId = currentUser?.organization_id
+
+  const [
+    { count: teamCount },
+    { count: employeeCount },
+    { count: pendingInvites },
+    { count: integrationsCount },
+    { count: successfulProvisions }
+  ] = await Promise.all([
+    supabase.from('teams').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
+    supabase.from('users').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
+    supabase.from('invites').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'pending'),
+    supabase.from('integrations').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('is_active', true),
+    supabase.from('provisioning_logs').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'success'),
+  ])
 
   return (
     <div className="space-y-6">
@@ -26,6 +54,50 @@ export default async function DashboardPage() {
         <p className="text-muted-foreground">
           Welcome back! Here&apos;s an overview of your company.
         </p>
+      </div>
+
+      {/* Platform Stats - Real Data */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Team Members</CardTitle>
+            <Users className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-700">{employeeCount || 0}</div>
+            <p className="text-xs text-green-600">{teamCount || 0} teams</p>
+          </CardContent>
+        </Card>
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Integrations</CardTitle>
+            <Link2 className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-700">{integrationsCount || 0}</div>
+            <p className="text-xs text-blue-600">connected</p>
+          </CardContent>
+        </Card>
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Invites</CardTitle>
+            <UserPlus className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-700">{pendingInvites || 0}</div>
+            <p className="text-xs text-yellow-600">awaiting signup</p>
+          </CardContent>
+        </Card>
+        <Card className="border-purple-200 bg-purple-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Automations Run</CardTitle>
+            <CheckCircle className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-700">{successfulProvisions || 0}</div>
+            <p className="text-xs text-purple-600">successful provisions</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Key Metrics */}
