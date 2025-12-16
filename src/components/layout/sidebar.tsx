@@ -15,6 +15,7 @@ import {
   LogOut,
   FolderKanban,
   Link2,
+  ScrollText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -29,6 +30,7 @@ const navigation = [
   { name: 'Teams Setup', href: '/dashboard/teams', icon: FolderKanban },
   { name: 'Invite', href: '/dashboard/invite', icon: UserPlus },
   { name: 'Integrations', href: '/dashboard/integrations', icon: Link2 },
+  { name: 'Logs', href: '/dashboard/logs', icon: ScrollText },
 ]
 
 const integrations = [
