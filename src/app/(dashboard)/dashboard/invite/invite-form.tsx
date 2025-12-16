@@ -20,11 +20,12 @@ interface Employee {
 
 interface InviteFormProps {
   organizationId: string
+  organizationName: string
   teams: Team[]
   employees: Employee[]
 }
 
-export function InviteForm({ organizationId, teams, employees }: InviteFormProps) {
+export function InviteForm({ organizationId, organizationName, teams, employees }: InviteFormProps) {
   const [email, setEmail] = useState('')
   const [position, setPosition] = useState('')
   const [teamId, setTeamId] = useState('')
@@ -77,18 +78,41 @@ export function InviteForm({ organizationId, teams, employees }: InviteFormProps
         invite_token: inviteToken,
       })
 
-    setIsLoading(false)
-
     if (insertError) {
       setError(insertError.message)
-    } else {
-      setIsSent(true)
-      setEmail('')
-      setPosition('')
-      setTeamId('')
-      setManagerId('')
-      setTimeout(() => setIsSent(false), 3000)
+      setIsLoading(false)
+      return
     }
+
+    // Send invite email
+    try {
+      const emailResponse = await fetch('/api/email/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.toLowerCase(),
+          inviteToken,
+          organizationName,
+          position: position || null,
+        }),
+      })
+
+      if (!emailResponse.ok) {
+        const errorData = await emailResponse.json()
+        console.error('Email send error:', errorData)
+        // Don't fail the invite if email fails, just log it
+      }
+    } catch (emailError) {
+      console.error('Email send error:', emailError)
+    }
+
+    setIsLoading(false)
+    setIsSent(true)
+    setEmail('')
+    setPosition('')
+    setTeamId('')
+    setManagerId('')
+    setTimeout(() => setIsSent(false), 3000)
   }
 
   return (

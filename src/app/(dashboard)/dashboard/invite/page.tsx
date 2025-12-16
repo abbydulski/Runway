@@ -84,6 +84,7 @@ export default async function InvitePage() {
         <CardContent>
           <InviteForm
             organizationId={profile.organization_id}
+            organizationName={profile.organizations?.name || 'the company'}
             teams={teams || []}
             employees={employees || []}
           />
