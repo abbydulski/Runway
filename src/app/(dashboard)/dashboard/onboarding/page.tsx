@@ -121,7 +121,7 @@ export default async function OnboardingPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm">{step.title}</p>
-                          {step.required && (
+                          {step.is_required && (
                             <Badge variant="destructive" className="text-xs">
                               Required
                             </Badge>
