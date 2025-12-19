@@ -28,6 +28,7 @@ const navigation = [
   { name: 'Team', href: '/dashboard/team', icon: Users },
   { name: 'Org Chart', href: '/dashboard/org-chart', icon: Users },
   { name: 'Teams Setup', href: '/dashboard/teams', icon: FolderKanban },
+  { name: 'Onboarding Setup', href: '/dashboard/onboarding-setup', icon: Settings },
   { name: 'Invite', href: '/dashboard/invite', icon: UserPlus },
   { name: 'Integrations', href: '/dashboard/integrations', icon: Link2 },
   { name: 'Logs', href: '/dashboard/logs', icon: ScrollText },

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BarChart3, Users, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, Users, Zap, Shield, DollarSign, GitBranch } from "lucide-react";
 
 export default function Home() {
   return (
@@ -26,13 +26,16 @@ export default function Home() {
 
       {/* Hero */}
       <main className="container mx-auto px-4 py-24 text-center">
+        <div className="inline-block px-4 py-1.5 bg-primary/10 rounded-full text-sm font-medium text-primary mb-6">
+          The Operating System for Startups
+        </div>
         <h1 className="text-5xl font-bold tracking-tight max-w-3xl mx-auto">
-          Your startup&apos;s operations,{" "}
-          <span className="text-primary">all in one place</span>
+          Run your startup like a{" "}
+          <span className="text-primary">well-oiled machine</span>
         </h1>
         <p className="text-xl text-muted-foreground mt-6 max-w-2xl mx-auto">
-          Connect GitHub, Deel, QuickBooks, Mercury and more. Get a unified view
-          of your team, finances, and operations.
+          HR, payroll, compliance, and team management — all automated.
+          Connect your tools, onboard employees in minutes, and focus on building your product.
         </p>
         <div className="flex gap-4 justify-center mt-10">
           <Link href="/signup">
@@ -50,30 +53,61 @@ export default function Home() {
         {/* Features */}
         <div className="grid md:grid-cols-3 gap-8 mt-24 text-left">
           <div className="p-6 rounded-lg border bg-card">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-              <BarChart3 className="h-6 w-6 text-primary" />
+            <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center mb-4">
+              <Users className="h-6 w-6 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold">People & HR</h3>
+            <p className="text-muted-foreground mt-2">
+              Hire, onboard, and manage your team. Automated provisioning to Slack, GitHub, and more.
+            </p>
+          </div>
+          <div className="p-6 rounded-lg border bg-card">
+            <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center mb-4">
+              <DollarSign className="h-6 w-6 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold">Payroll & Finance</h3>
+            <p className="text-muted-foreground mt-2">
+              Track burn rate, runway, and expenses. Integrate with Deel, Mercury, and QuickBooks.
+            </p>
+          </div>
+          <div className="p-6 rounded-lg border bg-card">
+            <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center mb-4">
+              <Shield className="h-6 w-6 text-purple-600" />
+            </div>
+            <h3 className="text-lg font-semibold">Compliance</h3>
+            <p className="text-muted-foreground mt-2">
+              Contracts, NDAs, and agreements. Keep your startup legally buttoned up.
+            </p>
+          </div>
+        </div>
+
+        {/* Second row of features */}
+        <div className="grid md:grid-cols-3 gap-8 mt-8 text-left">
+          <div className="p-6 rounded-lg border bg-card">
+            <div className="h-12 w-12 rounded-lg bg-orange-100 flex items-center justify-center mb-4">
+              <GitBranch className="h-6 w-6 text-orange-600" />
+            </div>
+            <h3 className="text-lg font-semibold">Developer Tools</h3>
+            <p className="text-muted-foreground mt-2">
+              Auto-add engineers to GitHub repos, manage access, track PRs and commits.
+            </p>
+          </div>
+          <div className="p-6 rounded-lg border bg-card">
+            <div className="h-12 w-12 rounded-lg bg-pink-100 flex items-center justify-center mb-4">
+              <BarChart3 className="h-6 w-6 text-pink-600" />
             </div>
             <h3 className="text-lg font-semibold">Unified Dashboard</h3>
             <p className="text-muted-foreground mt-2">
-              See all your metrics in one place. Revenue, burn rate, team size, and more.
+              All your metrics in one place. Team size, burn rate, runway, and KPIs.
             </p>
           </div>
           <div className="p-6 rounded-lg border bg-card">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-              <Users className="h-6 w-6 text-primary" />
+            <div className="h-12 w-12 rounded-lg bg-cyan-100 flex items-center justify-center mb-4">
+              <Zap className="h-6 w-6 text-cyan-600" />
             </div>
-            <h3 className="text-lg font-semibold">Team Onboarding</h3>
+            <h3 className="text-lg font-semibold">Automations</h3>
             <p className="text-muted-foreground mt-2">
-              Streamlined onboarding for new hires. Track progress and manage your org chart.
-            </p>
-          </div>
-          <div className="p-6 rounded-lg border bg-card">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-              <Zap className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold">Integrations</h3>
-            <p className="text-muted-foreground mt-2">
-              Connect your favorite tools. GitHub, Deel, QuickBooks, Mercury, and more.
+              Set it and forget it. Automatic provisioning, notifications, and workflows.
             </p>
           </div>
         </div>

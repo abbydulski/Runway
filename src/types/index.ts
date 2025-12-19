@@ -38,11 +38,16 @@ export interface OrgChartNode {
 // Onboarding Types
 export interface OnboardingStep {
   id: string
+  organization_id: string
   title: string
   description: string
   category: 'personal' | 'company' | 'tools' | 'team'
-  order: number
-  required: boolean
+  step_type: 'integration' | 'manual' | 'document'
+  integration_provider?: IntegrationProvider
+  document_url?: string
+  order_index: number
+  is_enabled: boolean
+  is_required: boolean
 }
 
 export interface UserOnboardingProgress {
