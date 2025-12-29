@@ -21,7 +21,7 @@ export default async function DashboardLayout({
   // Get user profile with organization data
   const { data: profile } = await supabase
     .from('users')
-    .select('name, email, avatar_url, role, organization_id, organizations(logo_url)')
+    .select('name, email, avatar_url, role, organization_id, organizations(logo_url, setup_completed)')
     .eq('id', authUser.id)
     .single()
 
@@ -34,6 +34,12 @@ export default async function DashboardLayout({
   const org = Array.isArray(profile?.organizations)
     ? profile.organizations[0]
     : profile?.organizations
+
+  // Redirect to setup if not completed
+  if (!org?.setup_completed) {
+    redirect('/setup')
+  }
+
   const companyLogo = org?.logo_url ? getAvatarUrl(org.logo_url) : undefined
 
   return (
