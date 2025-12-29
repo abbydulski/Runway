@@ -8,16 +8,20 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
-import { 
-  Building2, 
-  ArrowRight, 
-  MessageSquare, 
-  Github, 
+import {
+  Building2,
+  ArrowRight,
+  MessageSquare,
+  Github,
   FileText,
   CreditCard,
   Users,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Landmark,
+  Layers,
+  Key,
+  Mail
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -26,11 +30,12 @@ interface IntegrationOption {
   name: string
   description: string
   icon: React.ReactNode
-  category: 'communication' | 'development' | 'finance' | 'hr'
+  category: 'communication' | 'development' | 'finance' | 'hr' | 'productivity' | 'security'
   recommended?: boolean
 }
 
 const AVAILABLE_INTEGRATIONS: IntegrationOption[] = [
+  // Communication
   {
     id: 'slack',
     name: 'Slack',
@@ -40,6 +45,14 @@ const AVAILABLE_INTEGRATIONS: IntegrationOption[] = [
     recommended: true,
   },
   {
+    id: 'google_workspace',
+    name: 'Google Workspace',
+    description: 'Provision email, calendar & Drive access',
+    icon: <Mail className="h-5 w-5" />,
+    category: 'communication',
+  },
+  // Development
+  {
     id: 'github',
     name: 'GitHub',
     description: 'Add employees to org & repos automatically',
@@ -47,6 +60,14 @@ const AVAILABLE_INTEGRATIONS: IntegrationOption[] = [
     category: 'development',
     recommended: true,
   },
+  {
+    id: 'linear',
+    name: 'Linear',
+    description: 'Add to teams & projects for issue tracking',
+    icon: <Layers className="h-5 w-5" />,
+    category: 'development',
+  },
+  // Finance
   {
     id: 'quickbooks',
     name: 'QuickBooks',
@@ -56,6 +77,21 @@ const AVAILABLE_INTEGRATIONS: IntegrationOption[] = [
     recommended: true,
   },
   {
+    id: 'mercury',
+    name: 'Mercury',
+    description: 'Connect banking data for cash flow insights',
+    icon: <Landmark className="h-5 w-5" />,
+    category: 'finance',
+  },
+  {
+    id: 'stripe',
+    name: 'Stripe',
+    description: 'Track payments, subscriptions & revenue',
+    icon: <CreditCard className="h-5 w-5" />,
+    category: 'finance',
+  },
+  // HR
+  {
     id: 'deel',
     name: 'Deel',
     description: 'Manage contracts & payroll for global team',
@@ -63,11 +99,19 @@ const AVAILABLE_INTEGRATIONS: IntegrationOption[] = [
     category: 'hr',
   },
   {
-    id: 'google_workspace',
-    name: 'Google Workspace',
-    description: 'Provision email & Drive access',
+    id: 'gusto',
+    name: 'Gusto',
+    description: 'US payroll, benefits & HR management',
     icon: <Users className="h-5 w-5" />,
-    category: 'communication',
+    category: 'hr',
+  },
+  // Security
+  {
+    id: 'onepassword',
+    name: '1Password',
+    description: 'Provision password vault access via SCIM',
+    icon: <Key className="h-5 w-5" />,
+    category: 'security',
   },
 ]
 

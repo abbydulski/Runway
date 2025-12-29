@@ -237,11 +237,11 @@ function SignUpForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Image src="/logo.svg" alt="ASC" width={32} height={32} />
-            <span className="text-2xl font-bold">ASC</span>
+            <Image src="/RunwayLogo.png" alt="Runway" width={32} height={32} />
+            <span className="text-2xl font-bold">Runway</span>
           </div>
           <CardTitle className="text-2xl">Create your account</CardTitle>
-          <CardDescription>Get started with ASC today</CardDescription>
+          <CardDescription>Get started with Runway today</CardDescription>
         </CardHeader>
         <form onSubmit={handleSignUp}>
           <CardContent className="space-y-4">
