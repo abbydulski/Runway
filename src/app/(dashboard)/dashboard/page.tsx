@@ -21,6 +21,13 @@ import { getAllDashboardData } from '@/lib/mock-data'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
+// Consistent financial data matching the Financials page
+const FINANCIAL_DATA = {
+  cashBalance: 847000,
+  monthlyBurn: 62000,
+  runway: 13.7,
+}
+
 export default async function DashboardPage() {
   const data = await getAllDashboardData()
   const supabase = await createClient()
@@ -129,23 +136,21 @@ export default async function DashboardPage() {
         />
         <MetricCard
           title="Bank Balance"
-          value={`$${(data.metrics.bankBalance / 1000).toFixed(0)}k`}
+          value={`$${(FINANCIAL_DATA.cashBalance / 1000).toFixed(0)}k`}
           description="Across all accounts"
           icon={Landmark}
-          trend={{ value: 12, isPositive: true }}
         />
         <MetricCard
           title="Monthly Burn"
-          value={`$${(data.metrics.monthlyBurn / 1000).toFixed(0)}k`}
+          value={`$${(FINANCIAL_DATA.monthlyBurn / 1000).toFixed(0)}k`}
           description="Operating expenses"
           icon={DollarSign}
         />
         <MetricCard
           title="Runway"
-          value={`${data.metrics.runway} months`}
+          value={`${FINANCIAL_DATA.runway} months`}
           description="At current burn rate"
           icon={TrendingUp}
-          trend={{ value: 5, isPositive: true }}
         />
       </div>
 
@@ -153,8 +158,8 @@ export default async function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <RunwayChart
           data={data.quickbooks.pnl}
-          bankBalance={data.metrics.bankBalance}
-          monthlyBurn={data.metrics.monthlyBurn}
+          bankBalance={FINANCIAL_DATA.cashBalance}
+          monthlyBurn={FINANCIAL_DATA.monthlyBurn}
         />
         <RevenueExpenseChart data={data.quickbooks.pnl} />
       </div>

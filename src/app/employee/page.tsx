@@ -47,8 +47,8 @@ export default async function EmployeeDashboard() {
       <header className="border-b bg-white">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="ASC" width={24} height={24} />
-            <span className="text-xl font-bold">ASC</span>
+            <Image src="/RunwayLogo.png" alt="Runway" width={24} height={24} />
+            <span className="text-xl font-bold">Runway</span>
           </div>
           <div className="flex items-center gap-4">
             <Avatar className="h-8 w-8">

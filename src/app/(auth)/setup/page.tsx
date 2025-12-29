@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Building2,
   ArrowRight,
@@ -21,7 +22,9 @@ import {
   Landmark,
   Layers,
   Key,
-  Mail
+  Mail,
+  Upload,
+  ImageIcon
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -133,6 +136,13 @@ export default function SetupPage() {
   const [orgId, setOrgId] = useState<string | null>(null)
   const [orgName, setOrgName] = useState('')
 
+  // Logo upload state
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [skipLogo, setSkipLogo] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -171,11 +181,80 @@ export default function SetupPage() {
   }, [router, supabase])
 
   const toggleIntegration = (id: string) => {
-    setSelectedIntegrations(prev => 
-      prev.includes(id) 
+    setSelectedIntegrations(prev =>
+      prev.includes(id)
         ? prev.filter(i => i !== id)
         : [...prev, id]
     )
+  }
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !orgId) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file')
+      return
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image must be less than 2MB')
+      return
+    }
+
+    setUploadingLogo(true)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setLogoPreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+
+    // Upload to Supabase storage
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${orgId}/logo.${fileExt}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('logos')
+      .upload(fileName, file, { upsert: true })
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError)
+      // If bucket doesn't exist, just store a URL reference
+      // For now, we'll use data URL as fallback
+      setLogoUrl(logoPreview)
+      setUploadingLogo(false)
+      return
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('logos')
+      .getPublicUrl(fileName)
+
+    setLogoUrl(urlData.publicUrl)
+    setUploadingLogo(false)
+  }
+
+  const handleLogoStepNext = async () => {
+    if (!orgId) return
+
+    // If skip is checked or no logo uploaded, use placeholder
+    const finalLogoUrl = skipLogo || !logoUrl ? '/RunwayPlaceholderLogo.png' : logoUrl
+
+    const { error } = await supabase
+      .from('organizations')
+      .update({ logo_url: finalLogoUrl })
+      .eq('id', orgId)
+
+    if (error) {
+      console.error('Failed to save logo:', error)
+    }
+
+    setStep(3)
   }
 
   const handleComplete = async () => {
@@ -185,28 +264,13 @@ export default function SetupPage() {
 
     setSaving(true)
 
-    // Save selected integrations preference and set placeholder logo if not set
     if (orgId) {
-      // First check if logo is already set
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('logo_url')
-        .eq('id', orgId)
-        .single()
-
-      const updates: Record<string, unknown> = {
-        setup_completed: true,
-        selected_integrations: selectedIntegrations
-      }
-
-      // Set placeholder logo if no logo exists
-      if (!org?.logo_url) {
-        updates.logo_url = '/RunwayPlaceholderLogo.png'
-      }
-
       const { error } = await supabase
         .from('organizations')
-        .update(updates)
+        .update({
+          setup_completed: true,
+          selected_integrations: selectedIntegrations
+        })
         .eq('id', orgId)
 
       if (error) {
@@ -249,9 +313,9 @@ export default function SetupPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-muted-foreground">Setup Progress</span>
-            <span className="font-medium">Step {step} of 2</span>
+            <span className="font-medium">Step {step} of 3</span>
           </div>
-          <Progress value={step * 50} className="h-2" />
+          <Progress value={(step / 3) * 100} className="h-2" />
         </div>
 
         {/* Step 1: Welcome */}
@@ -295,8 +359,91 @@ export default function SetupPage() {
           </Card>
         )}
 
-        {/* Step 2: Select Integrations */}
+        {/* Step 2: Company Logo */}
         {step === 2 && (
+          <Card>
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <ImageIcon className="h-8 w-8 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">Add Your Company Logo</CardTitle>
+              <CardDescription className="text-base">
+                Upload your company logo to personalize your workspace
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-4">
+              {/* Logo Preview */}
+              <div className="flex flex-col items-center gap-4">
+                <Avatar className="h-32 w-32 border-4 border-muted">
+                  <AvatarImage src={logoPreview || '/RunwayPlaceholderLogo.png'} alt="Company logo" />
+                  <AvatarFallback>
+                    <Building2 className="h-12 w-12 text-muted-foreground" />
+                  </AvatarFallback>
+                </Avatar>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingLogo || skipLogo}
+                >
+                  {uploadingLogo ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Logo
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-xs text-muted-foreground">
+                  PNG, JPG, or SVG. Max 2MB.
+                </p>
+              </div>
+
+              {/* Skip checkbox */}
+              <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30">
+                <Checkbox
+                  id="skip-logo"
+                  checked={skipLogo}
+                  onCheckedChange={(checked) => {
+                    setSkipLogo(checked === true)
+                    if (checked) {
+                      setLogoPreview(null)
+                      setLogoUrl(null)
+                    }
+                  }}
+                />
+                <Label htmlFor="skip-logo" className="text-sm cursor-pointer">
+                  Skip this step for now (you can add a logo later in settings)
+                </Label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                  Back
+                </Button>
+                <Button onClick={handleLogoStepNext} className="flex-1" disabled={uploadingLogo}>
+                  Continue <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Select Integrations */}
+        {step === 3 && (
           <Card>
             <CardHeader>
               <CardTitle>Choose Your Integrations</CardTitle>
@@ -450,7 +597,7 @@ export default function SetupPage() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                   Back
                 </Button>
                 <Button
