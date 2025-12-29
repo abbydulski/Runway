@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Bell, Search, Settings, User, LogOut } from 'lucide-react'
+import { Search, Settings, User, LogOut } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -20,9 +20,10 @@ interface HeaderProps {
   userName?: string
   userEmail?: string
   userAvatar?: string
+  companyLogo?: string
 }
 
-export function Header({ userName = 'User', userEmail = 'user@example.com', userAvatar }: HeaderProps) {
+export function Header({ userName = 'User', userEmail = 'user@example.com', userAvatar, companyLogo }: HeaderProps) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -36,6 +37,9 @@ export function Header({ userName = 'User', userEmail = 'user@example.com', user
     await supabase.auth.signOut()
     router.push('/login')
   }
+
+  // Use company logo for avatar if available, otherwise use user avatar
+  const displayAvatar = companyLogo || userAvatar
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-6">
@@ -52,44 +56,12 @@ export function Header({ userName = 'User', userEmail = 'user@example.com', user
 
       {/* Right side */}
       <div className="flex items-center gap-4">
-        {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-                3
-              </span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <p className="text-sm font-medium">New employee joined</p>
-              <p className="text-xs text-muted-foreground">Sarah Miller completed onboarding</p>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <p className="text-sm font-medium">Payroll processed</p>
-              <p className="text-xs text-muted-foreground">December payroll was processed successfully</p>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <p className="text-sm font-medium">New PR merged</p>
-              <p className="text-xs text-muted-foreground">Feature branch was merged to main</p>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-center justify-center text-primary">
-              View all notifications
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar>
-                <AvatarImage src={userAvatar} alt={userName} />
+                <AvatarImage src={displayAvatar} alt={userName} />
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
             </Button>

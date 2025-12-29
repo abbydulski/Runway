@@ -18,10 +18,10 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  // Get user profile
+  // Get user profile with organization data
   const { data: profile } = await supabase
     .from('users')
-    .select('name, email, avatar_url, role')
+    .select('name, email, avatar_url, role, organization_id, organizations(logo_url)')
     .eq('id', authUser.id)
     .single()
 
@@ -29,6 +29,12 @@ export default async function DashboardLayout({
   if (profile?.role !== 'founder') {
     redirect('/employee')
   }
+
+  // Get company logo from organization
+  const org = Array.isArray(profile?.organizations)
+    ? profile.organizations[0]
+    : profile?.organizations
+  const companyLogo = org?.logo_url ? getAvatarUrl(org.logo_url) : undefined
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -38,6 +44,7 @@ export default async function DashboardLayout({
           userName={profile?.name || 'User'}
           userEmail={profile?.email || authUser.email || ''}
           userAvatar={getAvatarUrl(profile?.avatar_url)}
+          companyLogo={companyLogo}
         />
         <main className="flex-1 overflow-auto p-6">
           {children}

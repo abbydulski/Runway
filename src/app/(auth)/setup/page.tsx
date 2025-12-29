@@ -50,6 +50,14 @@ const AVAILABLE_INTEGRATIONS: IntegrationOption[] = [
     description: 'Provision email, calendar & Drive access',
     icon: <Mail className="h-5 w-5" />,
     category: 'communication',
+    recommended: true,
+  },
+  {
+    id: 'microsoft_365',
+    name: 'Microsoft 365',
+    description: 'Provision Outlook, Teams & OneDrive access',
+    icon: <Mail className="h-5 w-5" />,
+    category: 'communication',
   },
   // Development
   {
@@ -171,16 +179,34 @@ export default function SetupPage() {
   }
 
   const handleComplete = async () => {
+    if (selectedIntegrations.length === 0) {
+      return // Don't allow completion without at least one integration
+    }
+
     setSaving(true)
 
-    // Save selected integrations preference
+    // Save selected integrations preference and set placeholder logo if not set
     if (orgId) {
+      // First check if logo is already set
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('logo_url')
+        .eq('id', orgId)
+        .single()
+
+      const updates: Record<string, unknown> = {
+        setup_completed: true,
+        selected_integrations: selectedIntegrations
+      }
+
+      // Set placeholder logo if no logo exists
+      if (!org?.logo_url) {
+        updates.logo_url = '/RunwayPlaceholderLogo.png'
+      }
+
       await supabase
         .from('organizations')
-        .update({ 
-          setup_completed: true,
-          selected_integrations: selectedIntegrations 
-        })
+        .update(updates)
         .eq('id', orgId)
     }
 
@@ -201,8 +227,8 @@ export default function SetupPage() {
       <header className="border-b bg-white">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="ASC" width={24} height={24} />
-            <span className="text-xl font-bold">ASC</span>
+            <Image src="/RunwayLogo.png" alt="Runway" width={32} height={32} />
+            <span className="text-xl font-bold">Runway</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Building2 className="h-4 w-4" />
@@ -228,14 +254,14 @@ export default function SetupPage() {
               <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <CheckCircle2 className="h-8 w-8 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Welcome to ASC! 🎉</CardTitle>
+              <CardTitle className="text-2xl">Welcome to Runway! 🎉</CardTitle>
               <CardDescription className="text-base">
                 Let&apos;s set up your workspace for <strong>{orgName}</strong>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-4">
               <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                <h3 className="font-medium">Here&apos;s what you can do with ASC:</h3>
+                <h3 className="font-medium">Here&apos;s what you can do with Runway:</h3>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -420,7 +446,11 @@ export default function SetupPage() {
                 <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
                   Back
                 </Button>
-                <Button onClick={handleComplete} disabled={saving} className="flex-1">
+                <Button
+                  onClick={handleComplete}
+                  disabled={saving || selectedIntegrations.length === 0}
+                  className="flex-1"
+                >
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -435,8 +465,14 @@ export default function SetupPage() {
                 </Button>
               </div>
 
+              {selectedIntegrations.length === 0 && (
+                <p className="text-sm text-center text-amber-600">
+                  Please select at least one integration to continue.
+                </p>
+              )}
+
               <p className="text-xs text-center text-muted-foreground">
-                You can connect and configure these integrations from your dashboard settings.
+                You can add more integrations later from your dashboard settings.
               </p>
             </CardContent>
           </Card>

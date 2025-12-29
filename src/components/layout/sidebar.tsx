@@ -56,7 +56,8 @@ const ALL_INTEGRATIONS: Record<string, { name: string; href: string; icon: Lucid
   linear: { name: 'Linear', href: '/dashboard/linear', icon: Layers },
   gusto: { name: 'Gusto', href: '/dashboard/gusto', icon: Users },
   onepassword: { name: '1Password', href: '/dashboard/1password', icon: Key },
-  google_workspace: { name: 'Google Workspace', href: '/dashboard/google', icon: Mail },
+  google_workspace: { name: 'Google', href: '/dashboard/google', icon: Mail },
+  microsoft_365: { name: 'Microsoft', href: '/dashboard/microsoft', icon: Mail },
 }
 
 export function Sidebar() {

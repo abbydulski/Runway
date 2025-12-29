@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Settings, User, Building2 } from 'lucide-react'
 import { SettingsForm } from './settings-form'
+import { CompanyLogoForm } from './company-logo-form'
 import { getAvatarUrl } from '@/lib/utils'
 
 export default async function SettingsPage() {
@@ -18,7 +19,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('*, organizations(name)')
+    .select('*, organizations(id, name, logo_url)')
     .eq('id', authUser.id)
     .single()
 
@@ -89,7 +90,7 @@ export default async function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <label className="text-sm font-medium text-muted-foreground">Company Name</label>
               <p className="text-lg">{profile.organizations?.name || 'Not set'}</p>
@@ -98,6 +99,14 @@ export default async function SettingsPage() {
               <label className="text-sm font-medium text-muted-foreground">Your Department</label>
               <p className="text-lg">{profile.department || 'Not set'}</p>
             </div>
+
+            {/* Company Logo Upload - Only for founders */}
+            {profile.role === 'founder' && profile.organizations && (
+              <CompanyLogoForm
+                organizationId={profile.organizations.id}
+                currentLogoUrl={profile.organizations.logo_url}
+              />
+            )}
           </div>
         </CardContent>
       </Card>
