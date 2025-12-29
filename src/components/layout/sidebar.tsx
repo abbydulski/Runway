@@ -16,6 +16,7 @@ import {
   FolderKanban,
   Link2,
   ScrollText,
+  DollarSign,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -25,6 +26,7 @@ import Image from 'next/image'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Financials', href: '/dashboard/financials', icon: DollarSign },
   { name: 'Team', href: '/dashboard/team', icon: Users },
   { name: 'Org Chart', href: '/dashboard/org-chart', icon: Users },
   { name: 'Teams Setup', href: '/dashboard/teams', icon: FolderKanban },

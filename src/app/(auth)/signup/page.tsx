@@ -225,7 +225,7 @@ function SignUpForm() {
 
       // Success - redirect based on role
       if (role === 'founder') {
-        router.push('/dashboard')
+        router.push('/setup') // New founder setup wizard
       } else {
         router.push('/onboarding')
       }

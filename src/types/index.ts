@@ -22,6 +22,8 @@ export interface Organization {
   logo_url?: string
   created_at: string
   founder_id: string
+  setup_completed?: boolean
+  selected_integrations?: string[]
 }
 
 // Org Chart Types
