@@ -5,8 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Default avatar image path - upload your logo to public/default-avatar.png
-export const DEFAULT_AVATAR = '/default-avatar.png'
+// Default avatar/logo image path
+export const DEFAULT_AVATAR = '/RunwayPlaceholderLogo.png'
 
 // Get avatar URL - returns user's avatar if set, otherwise returns default
 export function getAvatarUrl(avatarUrl?: string | null): string {

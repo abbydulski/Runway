@@ -3,6 +3,7 @@ import { RunwayChart, RevenueExpenseChart, TeamCompositionChart } from '@/compon
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import {
   Users,
   DollarSign,
@@ -14,9 +15,11 @@ import {
   Clock,
   Link2,
   CheckCircle,
+  AlertTriangle,
 } from 'lucide-react'
 import { getAllDashboardData } from '@/lib/mock-data'
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 
 export default async function DashboardPage() {
   const data = await getAllDashboardData()
@@ -55,6 +58,22 @@ export default async function DashboardPage() {
           Welcome back! Here&apos;s an overview of your company.
         </p>
       </div>
+
+      {/* Sample Data Warning */}
+      <Card className="border-yellow-200 bg-yellow-50">
+        <CardContent className="flex items-center gap-4 py-4">
+          <AlertTriangle className="h-5 w-5 text-yellow-600" />
+          <div className="flex-1">
+            <p className="font-medium text-yellow-800">Using sample data</p>
+            <p className="text-sm text-yellow-700">
+              Connect QuickBooks to see your real financial data
+            </p>
+          </div>
+          <Button size="sm" asChild>
+            <Link href="/dashboard/integrations">Connect Now</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Platform Stats - Real Data */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -104,8 +123,8 @@ export default async function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Employees"
-          value={data.metrics.totalEmployees}
-          description={`${data.deel.stats.contractors} contractors, ${data.deel.stats.fullTimeEmployees} full-time`}
+          value={employeeCount || 0}
+          description="Team members in your organization"
           icon={Users}
         />
         <MetricCard

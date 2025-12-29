@@ -1,12 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { getGitHubData } from '@/lib/mock-data'
-import { GitBranch, GitPullRequest, GitCommit, Star, FolderGit2, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { GitBranch, GitPullRequest, GitCommit, FolderGit2, Users, CheckCircle2, AlertCircle } from 'lucide-react'
 
-export default async function GitHubPage() {
-  const { repos, commits, prs, stats } = await getGitHubData()
-
+export default function GitHubPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -20,6 +17,32 @@ export default async function GitHubPage() {
         </p>
       </div>
 
+      {/* Connection Status */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Connection Status</CardTitle>
+              <CardDescription>GitHub organization integration</CardDescription>
+            </div>
+            <Badge variant="outline" className="gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Not Connected
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Connect your GitHub organization to manage repository access,
+            track development activity, and automate team permissions.
+          </p>
+          <Button>
+            <GitBranch className="mr-2 h-4 w-4" />
+            Connect GitHub
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -28,7 +51,8 @@ export default async function GitHubPage() {
             <FolderGit2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalRepos}</div>
+            <div className="text-2xl font-bold">--</div>
+            <p className="text-xs text-muted-foreground">Total repos</p>
           </CardContent>
         </Card>
         <Card>
@@ -37,7 +61,8 @@ export default async function GitHubPage() {
             <GitPullRequest className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.openPRs}</div>
+            <div className="text-2xl font-bold">--</div>
+            <p className="text-xs text-muted-foreground">Awaiting review</p>
           </CardContent>
         </Card>
         <Card>
@@ -46,7 +71,8 @@ export default async function GitHubPage() {
             <GitCommit className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCommitsThisWeek}</div>
+            <div className="text-2xl font-bold">--</div>
+            <p className="text-xs text-muted-foreground">Recent activity</p>
           </CardContent>
         </Card>
         <Card>
@@ -55,98 +81,56 @@ export default async function GitHubPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.contributors}</div>
+            <div className="text-2xl font-bold">--</div>
+            <p className="text-xs text-muted-foreground">Team members</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Repositories */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Repositories</CardTitle>
-            <CardDescription>Your organization&apos;s repositories</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {repos.map((repo) => (
-                <div key={repo.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium">{repo.name}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{repo.description}</p>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Star className="h-4 w-4" />
-                      <span className="text-sm">{repo.stars}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-                    <span>{repo.open_issues} issues</span>
-                    <span>{repo.forks} forks</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pull Requests */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pull Requests</CardTitle>
-            <CardDescription>Recent pull requests across repos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {prs.map((pr) => (
-                <div key={pr.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={pr.author_avatar} />
-                    <AvatarFallback>{pr.author[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{pr.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {pr.author} • {pr.repo}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={pr.state === 'open' ? 'default' : pr.state === 'merged' ? 'secondary' : 'outline'}
-                    className={pr.state === 'merged' ? 'bg-purple-500' : ''}
-                  >
-                    {pr.state}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Commits */}
+      {/* Capabilities */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Commits</CardTitle>
-          <CardDescription>Latest activity from your team</CardDescription>
+          <CardTitle>What You Can Do</CardTitle>
+          <CardDescription>Available features when connected</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {commits.map((commit) => (
-              <div key={commit.sha} className="flex items-center gap-4 p-3 border rounded-lg">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={commit.author_avatar} />
-                  <AvatarFallback>{commit.author[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <p className="font-medium">{commit.message}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {commit.author} committed to {commit.repo}
-                  </p>
-                </div>
-                <Badge variant="outline" className="font-mono">{commit.sha}</Badge>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+              <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+              <div>
+                <p className="font-medium">Repository Access</p>
+                <p className="text-sm text-muted-foreground">
+                  Automatically grant new employees access to relevant repos
+                </p>
               </div>
-            ))}
+            </div>
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+              <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+              <div>
+                <p className="font-medium">Team Membership</p>
+                <p className="text-sm text-muted-foreground">
+                  Add employees to GitHub teams based on their role
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+              <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+              <div>
+                <p className="font-medium">Activity Tracking</p>
+                <p className="text-sm text-muted-foreground">
+                  Monitor commits, PRs, and development velocity
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+              <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+              <div>
+                <p className="font-medium">Offboarding</p>
+                <p className="text-sm text-muted-foreground">
+                  Revoke access when employees leave the organization
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -204,10 +204,17 @@ export default function SetupPage() {
         updates.logo_url = '/RunwayPlaceholderLogo.png'
       }
 
-      await supabase
+      const { error } = await supabase
         .from('organizations')
         .update(updates)
         .eq('id', orgId)
+
+      if (error) {
+        console.error('Failed to update organization:', error)
+        alert(`Failed to save: ${error.message}`)
+        setSaving(false)
+        return
+      }
     }
 
     router.push('/dashboard/integrations?setup=true')
