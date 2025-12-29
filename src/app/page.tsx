@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BarChart3, Users, Zap, Shield, DollarSign, GitBranch, Sparkles } from "lucide-react";
+import { ArrowRight, BarChart3, Users, Zap, Shield, DollarSign, GitBranch } from "lucide-react";
 
 export default function Home() {
   return (
@@ -39,11 +39,6 @@ export default function Home() {
             />
           </div>
 
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 rounded-full text-sm font-medium text-slate-700 mb-6">
-            <Sparkles className="h-4 w-4 text-purple-500" />
-            The Operating System for Startups
-          </div>
-
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight max-w-4xl mx-auto leading-tight">
             Launch your{" "}
             <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -56,15 +51,10 @@ export default function Home() {
             Connect your tools, onboard employees in minutes, and focus on building your product.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
+          <div className="flex justify-center mt-10">
             <Link href="/signup">
               <Button size="lg" className="gap-2 px-8 bg-gradient-to-r from-slate-900 to-slate-700 hover:from-slate-800 hover:to-slate-600">
                 Start for free <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/dashboard">
-              <Button size="lg" variant="outline" className="px-8">
-                View Demo
               </Button>
             </Link>
           </div>
@@ -73,11 +63,11 @@ export default function Home() {
           <div className="flex items-center gap-6 mt-12 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-green-500" />
-              No credit card required
+              Built for founding teams
             </div>
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-green-500" />
-              Free for small teams
+              Single platform
             </div>
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-green-500" />
@@ -162,9 +152,6 @@ export default function Home() {
         <div className="mt-32 text-center">
           <div className="max-w-2xl mx-auto p-12 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white">
             <h2 className="text-3xl font-bold">Ready to streamline your startup?</h2>
-            <p className="text-slate-300 mt-4">
-              Join hundreds of founders who trust Runway to manage their operations.
-            </p>
             <Link href="/signup">
               <Button size="lg" className="mt-8 bg-white text-slate-900 hover:bg-slate-100 gap-2">
                 Get Started Free <ArrowRight className="h-4 w-4" />
