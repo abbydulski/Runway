@@ -20,8 +20,8 @@ interface IntegrationConfig {
   docsUrl: string
 }
 
-const INTEGRATIONS: IntegrationConfig[] = [
-  {
+const ALL_INTEGRATIONS: Record<string, IntegrationConfig> = {
+  slack: {
     provider: 'slack',
     name: 'Slack',
     description: 'Invite employees to your Slack workspace and add them to team channels automatically.',
@@ -29,7 +29,7 @@ const INTEGRATIONS: IntegrationConfig[] = [
     color: 'bg-purple-500',
     docsUrl: 'https://api.slack.com/apps',
   },
-  {
+  github: {
     provider: 'github',
     name: 'GitHub',
     description: 'Add employees to your GitHub organization and assign them to the right teams.',
@@ -37,7 +37,7 @@ const INTEGRATIONS: IntegrationConfig[] = [
     color: 'bg-gray-800',
     docsUrl: 'https://github.com/settings/apps',
   },
-  {
+  deel: {
     provider: 'deel',
     name: 'Deel',
     description: 'Automatically create contractor or employee contracts for new hires.',
@@ -45,7 +45,7 @@ const INTEGRATIONS: IntegrationConfig[] = [
     color: 'bg-blue-600',
     docsUrl: 'https://developer.deel.com/',
   },
-  {
+  quickbooks: {
     provider: 'quickbooks',
     name: 'QuickBooks',
     description: 'Sync employee data with QuickBooks for payroll and expense tracking.',
@@ -53,7 +53,180 @@ const INTEGRATIONS: IntegrationConfig[] = [
     color: 'bg-green-600',
     docsUrl: 'https://developer.intuit.com/',
   },
-]
+  google_workspace: {
+    provider: 'google_workspace' as IntegrationProvider,
+    name: 'Google Workspace',
+    description: 'Create Google accounts and add to shared drives.',
+    icon: '📧',
+    color: 'bg-red-500',
+    docsUrl: 'https://developers.google.com/workspace',
+  },
+  microsoft_365: {
+    provider: 'microsoft_365' as IntegrationProvider,
+    name: 'Microsoft 365',
+    description: 'Provision Microsoft accounts and Teams access.',
+    icon: '🪟',
+    color: 'bg-blue-500',
+    docsUrl: 'https://developer.microsoft.com/',
+  },
+  notion: {
+    provider: 'notion' as IntegrationProvider,
+    name: 'Notion',
+    description: 'Add employees to your Notion workspace.',
+    icon: '📝',
+    color: 'bg-gray-900',
+    docsUrl: 'https://developers.notion.com/',
+  },
+  linear: {
+    provider: 'linear' as IntegrationProvider,
+    name: 'Linear',
+    description: 'Add employees to Linear projects and teams.',
+    icon: '📋',
+    color: 'bg-indigo-600',
+    docsUrl: 'https://linear.app/developers',
+  },
+  stripe: {
+    provider: 'stripe' as IntegrationProvider,
+    name: 'Stripe',
+    description: 'View payment and revenue metrics.',
+    icon: '💳',
+    color: 'bg-purple-600',
+    docsUrl: 'https://stripe.com/docs',
+  },
+  gusto: {
+    provider: 'gusto' as IntegrationProvider,
+    name: 'Gusto',
+    description: 'Sync employee payroll and benefits.',
+    icon: '💰',
+    color: 'bg-orange-500',
+    docsUrl: 'https://docs.gusto.com/',
+  },
+  mercury: {
+    provider: 'mercury' as IntegrationProvider,
+    name: 'Mercury',
+    description: 'View banking and financial data.',
+    icon: '🏦',
+    color: 'bg-slate-800',
+    docsUrl: 'https://mercury.com/',
+  },
+  onepassword: {
+    provider: '1password' as IntegrationProvider,
+    name: '1Password',
+    description: 'Provision 1Password vaults and access.',
+    icon: '🔐',
+    color: 'bg-blue-700',
+    docsUrl: 'https://developer.1password.com/',
+  },
+}
+
+// Integration Card Component
+function IntegrationCard({
+  config,
+  connected,
+  integration,
+  connecting,
+  slackInviteLink,
+  setSlackInviteLink,
+  savingSlackLink,
+  saveSlackInviteLink,
+  handleConnect,
+  handleDisconnect,
+  isSelected,
+}: {
+  config: IntegrationConfig
+  connected: boolean
+  integration: Integration | undefined
+  connecting: string | null
+  slackInviteLink: string
+  setSlackInviteLink: (v: string) => void
+  savingSlackLink: boolean
+  saveSlackInviteLink: () => void
+  handleConnect: (provider: IntegrationProvider) => void
+  handleDisconnect: (provider: IntegrationProvider) => void
+  isSelected: boolean
+}) {
+  return (
+    <Card className={`${connected ? 'border-green-200 bg-green-50/50' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : ''}`}>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-lg ${config.color} flex items-center justify-center text-2xl`}>
+              {config.icon}
+            </div>
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                {config.name}
+                {connected && <Badge className="bg-green-500"><Check className="h-3 w-3 mr-1" /> Connected</Badge>}
+                {isSelected && !connected && <Badge variant="outline" className="text-primary border-primary">Selected</Badge>}
+              </CardTitle>
+              <CardDescription>{config.description}</CardDescription>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <a href={config.docsUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
+            View docs <ExternalLink className="h-3 w-3" />
+          </a>
+          {connected ? (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => handleDisconnect(config.provider)}>
+                Disconnect
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={() => handleConnect(config.provider)} disabled={connecting === config.provider}>
+              {connecting === config.provider ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting...</>
+              ) : (
+                'Connect'
+              )}
+            </Button>
+          )}
+        </div>
+        {connected && integration?.connected_at && (
+          <p className="text-xs text-muted-foreground mt-3">
+            Connected {new Date(integration.connected_at).toLocaleDateString()}
+          </p>
+        )}
+        {/* Slack invite link input */}
+        {connected && config.provider === 'slack' && (
+          <div className="mt-4 pt-4 border-t space-y-3">
+            <div>
+              <Label htmlFor="slack-invite-link" className="text-sm font-medium">
+                Workspace Invite Link
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Get this from Slack: Settings → Invite People → Copy Link
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  id="slack-invite-link"
+                  placeholder="https://join.slack.com/t/your-workspace/..."
+                  value={slackInviteLink}
+                  onChange={(e) => setSlackInviteLink(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  size="sm"
+                  onClick={saveSlackInviteLink}
+                  disabled={savingSlackLink || !slackInviteLink}
+                >
+                  {savingSlackLink ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <><Save className="h-4 w-4 mr-1" /> Save</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function IntegrationsPage() {
   return (
@@ -65,6 +238,7 @@ export default function IntegrationsPage() {
 
 function IntegrationsContent() {
   const [integrations, setIntegrations] = useState<Integration[]>([])
+  const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -99,6 +273,28 @@ function IntegrationsContent() {
   }, [searchParams])
 
   async function fetchIntegrations() {
+    // Get user's organization to fetch selected integrations
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.organization_id) {
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('selected_integrations')
+          .eq('id', profile.organization_id)
+          .single()
+
+        if (org?.selected_integrations) {
+          setSelectedIntegrations(org.selected_integrations)
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from('integrations')
       .select('*')
@@ -192,99 +388,80 @@ function IntegrationsContent() {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {INTEGRATIONS.map((config) => {
-          const connected = isConnected(config.provider)
-          const integration = getIntegration(config.provider)
-          
-          return (
-            <Card key={config.provider} className={connected ? 'border-green-200 bg-green-50/50' : ''}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-lg ${config.color} flex items-center justify-center text-2xl`}>
-                      {config.icon}
-                    </div>
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        {config.name}
-                        {connected && <Badge className="bg-green-500"><Check className="h-3 w-3 mr-1" /> Connected</Badge>}
-                      </CardTitle>
-                      <CardDescription>{config.description}</CardDescription>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <a href={config.docsUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
-                    View docs <ExternalLink className="h-3 w-3" />
-                  </a>
-                  {connected ? (
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleDisconnect(config.provider)}>
-                        Disconnect
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button onClick={() => handleConnect(config.provider)} disabled={connecting === config.provider}>
-                      {connecting === config.provider ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting...</>
-                      ) : (
-                        'Connect'
-                      )}
-                    </Button>
-                  )}
-                </div>
-                {connected && integration?.connected_at && (
-                  <p className="text-xs text-muted-foreground mt-3">
-                    Connected {new Date(integration.connected_at).toLocaleDateString()}
-                  </p>
-                )}
-                {/* Slack invite link input */}
-                {connected && config.provider === 'slack' && (
-                  <div className="mt-4 pt-4 border-t space-y-3">
-                    <div>
-                      <Label htmlFor="slack-invite-link" className="text-sm font-medium">
-                        Workspace Invite Link
-                      </Label>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        Get this from Slack: Settings → Invite People → Copy Link
-                      </p>
-                      <div className="flex gap-2">
-                        <Input
-                          id="slack-invite-link"
-                          placeholder="https://join.slack.com/t/your-workspace/..."
-                          value={slackInviteLink}
-                          onChange={(e) => setSlackInviteLink(e.target.value)}
-                          className="flex-1"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={saveSlackInviteLink}
-                          disabled={savingSlackLink || !slackInviteLink}
-                        >
-                          {savingSlackLink ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <><Save className="h-4 w-4 mr-1" /> Save</>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+      {/* Your Selected Integrations */}
+      {selectedIntegrations.length > 0 && (
+        <>
+          <div>
+            <h2 className="text-xl font-semibold mb-1">Your Integrations</h2>
+            <p className="text-sm text-muted-foreground">Selected during setup - connect these to automate onboarding</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            {selectedIntegrations.map((key) => {
+              const config = ALL_INTEGRATIONS[key]
+              if (!config) return null
+              const connected = isConnected(config.provider)
+              const integration = getIntegration(config.provider)
 
-      <Card className="border-dashed">
-        <CardContent className="flex items-center justify-center py-8">
-          <p className="text-muted-foreground">More integrations coming soon: Google Workspace, Notion, Linear...</p>
-        </CardContent>
-      </Card>
+              return (
+                <IntegrationCard
+                  key={config.provider}
+                  config={config}
+                  connected={connected}
+                  integration={integration}
+                  connecting={connecting}
+                  slackInviteLink={slackInviteLink}
+                  setSlackInviteLink={setSlackInviteLink}
+                  savingSlackLink={savingSlackLink}
+                  saveSlackInviteLink={saveSlackInviteLink}
+                  handleConnect={handleConnect}
+                  handleDisconnect={handleDisconnect}
+                  isSelected
+                />
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Other Available Integrations */}
+      {(() => {
+        const otherIntegrations = Object.values(ALL_INTEGRATIONS).filter(
+          config => !selectedIntegrations.includes(config.provider)
+        )
+        if (otherIntegrations.length === 0) return null
+
+        return (
+          <>
+            <div className="pt-4">
+              <h2 className="text-xl font-semibold mb-1">Other Integrations</h2>
+              <p className="text-sm text-muted-foreground">Additional tools you can connect</p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              {otherIntegrations.map((config) => {
+                const connected = isConnected(config.provider)
+                const integration = getIntegration(config.provider)
+
+                return (
+                  <IntegrationCard
+                    key={config.provider}
+                    config={config}
+                    connected={connected}
+                    integration={integration}
+                    connecting={connecting}
+                    slackInviteLink={slackInviteLink}
+                    setSlackInviteLink={setSlackInviteLink}
+                    savingSlackLink={savingSlackLink}
+                    saveSlackInviteLink={saveSlackInviteLink}
+                    handleConnect={handleConnect}
+                    handleDisconnect={handleDisconnect}
+                    isSelected={false}
+                  />
+                )
+              })}
+            </div>
+          </>
+        )
+      })()}
     </div>
   )
 }
