@@ -263,47 +263,6 @@ export default function OnboardingSetupPage() {
         </CardContent>
       </Card>
 
-      {/* Employee Handbook Link */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Employee Handbook
-          </CardTitle>
-          <CardDescription>
-            Add a link to your employee handbook (Notion, Google Docs, PDF, etc.)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="https://notion.so/your-company/handbook or any URL"
-              value={handbookUrl}
-              onChange={(e) => setHandbookUrl(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              variant="outline"
-              onClick={handleSaveHandbookUrl}
-              disabled={savingHandbook}
-            >
-              {savingHandbook ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                'Save'
-              )}
-            </Button>
-            {handbookUrl && (
-              <Button variant="ghost" size="icon" asChild>
-                <a href={handbookUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Integration Steps */}
       <Card>
         <CardHeader>
