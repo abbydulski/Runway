@@ -21,7 +21,7 @@ import {
   Trash2,
   Save,
   Loader2,
-  Upload
+  ExternalLink
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -73,7 +73,7 @@ export default function OnboardingSetupPage() {
   const [loading, setLoading] = useState(true)
   const [orgId, setOrgId] = useState<string | null>(null)
   const [handbookUrl, setHandbookUrl] = useState<string>('')
-  const [uploadingHandbook, setUploadingHandbook] = useState(false)
+  const [savingHandbook, setSavingHandbook] = useState(false)
 
   // Load steps from database on mount
   useEffect(() => {
@@ -167,47 +167,16 @@ export default function OnboardingSetupPage() {
     setSteps(steps.filter(s => s.id !== id))
   }
 
-  const handleHandbookUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !orgId) return
+  const handleSaveHandbookUrl = async () => {
+    if (!orgId) return
+    setSavingHandbook(true)
 
-    if (file.type !== 'application/pdf') {
-      alert('Please upload a PDF file')
-      return
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File must be less than 10MB')
-      return
-    }
-
-    setUploadingHandbook(true)
-
-    const fileName = `${orgId}/handbook.pdf`
-    const { error: uploadError } = await supabase.storage
-      .from('company-assets')
-      .upload(fileName, file, { upsert: true })
-
-    if (uploadError) {
-      console.error('Upload error:', uploadError)
-      alert('Failed to upload handbook. Make sure storage is configured.')
-      setUploadingHandbook(false)
-      return
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('company-assets')
-      .getPublicUrl(fileName)
-
-    setHandbookUrl(publicUrl)
-
-    // Save to organization
     await supabase
       .from('organizations')
-      .update({ handbook_url: publicUrl })
+      .update({ handbook_url: handbookUrl || null })
       .eq('id', orgId)
 
-    setUploadingHandbook(false)
+    setSavingHandbook(false)
   }
 
   const handleSave = async () => {
@@ -294,7 +263,7 @@ export default function OnboardingSetupPage() {
         </CardContent>
       </Card>
 
-      {/* Employee Handbook Upload */}
+      {/* Employee Handbook Link */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -302,54 +271,35 @@ export default function OnboardingSetupPage() {
             Employee Handbook
           </CardTitle>
           <CardDescription>
-            Upload a PDF handbook that employees can access during onboarding
+            Add a link to your employee handbook (Notion, Google Docs, PDF, etc.)
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              {handbookUrl ? (
-                <div className="flex items-center gap-3">
-                  <FileText className="h-8 w-8 text-primary" />
-                  <div>
-                    <p className="font-medium">Handbook uploaded</p>
-                    <a
-                      href={handbookUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline"
-                    >
-                      View handbook
-                    </a>
-                  </div>
-                </div>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="https://notion.so/your-company/handbook or any URL"
+              value={handbookUrl}
+              onChange={(e) => setHandbookUrl(e.target.value)}
+              className="flex-1"
+            />
+            <Button
+              variant="outline"
+              onClick={handleSaveHandbookUrl}
+              disabled={savingHandbook}
+            >
+              {savingHandbook ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  No handbook uploaded yet
-                </p>
+                'Save'
               )}
-            </div>
-            <div>
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={handleHandbookUpload}
-                className="hidden"
-                id="handbook-upload"
-              />
-              <Button
-                variant="outline"
-                onClick={() => document.getElementById('handbook-upload')?.click()}
-                disabled={uploadingHandbook}
-              >
-                {uploadingHandbook ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4 mr-2" />
-                )}
-                {handbookUrl ? 'Replace' : 'Upload'} Handbook
+            </Button>
+            {handbookUrl && (
+              <Button variant="ghost" size="icon" asChild>
+                <a href={handbookUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                </a>
               </Button>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
