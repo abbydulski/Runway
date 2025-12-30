@@ -1,26 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Settings, 
-  MessageSquare, 
-  Github, 
-  Mail, 
-  FileText, 
-  Users, 
+import {
+  Settings,
+  MessageSquare,
+  Github,
+  Mail,
+  FileText,
+  Users,
   BookOpen,
   CheckCircle,
   Plus,
   GripVertical,
   Trash2,
-  Save
+  Save,
+  Loader2,
+  Upload
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 interface OnboardingStepConfig {
   id: string
@@ -33,76 +36,101 @@ interface OnboardingStepConfig {
   required: boolean
   documentUrl?: string
   isCustom?: boolean
+  stepOrder: number
 }
 
-const defaultSteps: OnboardingStepConfig[] = [
-  {
-    id: 'slack',
-    title: 'Join Slack Workspace',
-    description: 'Add employee to your Slack workspace and team channels',
-    icon: <MessageSquare className="h-5 w-5" />,
-    type: 'integration',
-    provider: 'slack',
-    enabled: true,
-    required: true,
-  },
-  {
-    id: 'github',
-    title: 'GitHub Access',
-    description: 'Add employee to GitHub organization and relevant repos',
-    icon: <Github className="h-5 w-5" />,
-    type: 'integration',
-    provider: 'github',
-    enabled: false,
-    required: false,
-  },
-  {
-    id: 'google',
-    title: 'Google Workspace',
-    description: 'Provision company email and Google Drive access',
-    icon: <Mail className="h-5 w-5" />,
-    type: 'integration',
-    provider: 'google_workspace',
-    enabled: false,
-    required: false,
-  },
-  {
-    id: 'nda',
-    title: 'Sign NDA',
-    description: 'Employee signs non-disclosure agreement',
-    icon: <FileText className="h-5 w-5" />,
-    type: 'document',
-    enabled: true,
-    required: true,
-    documentUrl: '',
-  },
-  {
-    id: 'handbook',
-    title: 'Read Employee Handbook',
-    description: 'Review company policies and guidelines',
-    icon: <BookOpen className="h-5 w-5" />,
-    type: 'document',
-    enabled: true,
-    required: false,
-    documentUrl: '',
-  },
-  {
-    id: 'manager',
-    title: 'Meet with Manager',
-    description: 'Schedule intro 1:1 with direct manager',
-    icon: <Users className="h-5 w-5" />,
-    type: 'manual',
-    enabled: true,
-    required: true,
-  },
+// Map of step IDs to their icons (since we can't store React nodes in DB)
+const stepIcons: Record<string, React.ReactNode> = {
+  slack: <MessageSquare className="h-5 w-5" />,
+  github: <Github className="h-5 w-5" />,
+  google: <Mail className="h-5 w-5" />,
+  nda: <FileText className="h-5 w-5" />,
+  handbook: <BookOpen className="h-5 w-5" />,
+  manager: <Users className="h-5 w-5" />,
+  default: <CheckCircle className="h-5 w-5" />,
+}
+
+const defaultSteps: Omit<OnboardingStepConfig, 'icon'>[] = [
+  { id: 'slack', title: 'Join Slack Workspace', description: 'Add employee to your Slack workspace and team channels', type: 'integration', provider: 'slack', enabled: true, required: true, stepOrder: 1 },
+  { id: 'github', title: 'GitHub Access', description: 'Add employee to GitHub organization and relevant repos', type: 'integration', provider: 'github', enabled: false, required: false, stepOrder: 2 },
+  { id: 'google', title: 'Google Workspace', description: 'Provision company email and Google Drive access', type: 'integration', provider: 'google_workspace', enabled: false, required: false, stepOrder: 3 },
+  { id: 'nda', title: 'Sign NDA', description: 'Employee signs non-disclosure agreement', type: 'document', enabled: true, required: true, documentUrl: '', stepOrder: 4 },
+  { id: 'handbook', title: 'Read Employee Handbook', description: 'Review company policies and guidelines', type: 'document', enabled: true, required: false, documentUrl: '', stepOrder: 5 },
+  { id: 'manager', title: 'Meet with Manager', description: 'Schedule intro 1:1 with direct manager', type: 'manual', enabled: true, required: true, stepOrder: 6 },
 ]
 
+function getIcon(stepId: string): React.ReactNode {
+  return stepIcons[stepId] || stepIcons.default
+}
+
 export default function OnboardingSetupPage() {
-  const [steps, setSteps] = useState<OnboardingStepConfig[]>(defaultSteps)
+  const supabase = createClient()
+  const [steps, setSteps] = useState<OnboardingStepConfig[]>([])
   const [customStepTitle, setCustomStepTitle] = useState('')
   const [customStepDescription, setCustomStepDescription] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [orgId, setOrgId] = useState<string | null>(null)
+  const [handbookUrl, setHandbookUrl] = useState<string>('')
+  const [uploadingHandbook, setUploadingHandbook] = useState(false)
+
+  // Load steps from database on mount
+  useEffect(() => {
+    async function loadSteps() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.organization_id) return
+      setOrgId(profile.organization_id)
+
+      // Load handbook URL from organization
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('handbook_url')
+        .eq('id', profile.organization_id)
+        .single()
+
+      if (org?.handbook_url) {
+        setHandbookUrl(org.handbook_url)
+      }
+
+      // Load existing steps from database
+      const { data: dbSteps } = await supabase
+        .from('onboarding_steps')
+        .select('*')
+        .eq('organization_id', profile.organization_id)
+        .order('step_order')
+
+      if (dbSteps && dbSteps.length > 0) {
+        // Map database steps to our config format
+        setSteps(dbSteps.map(s => ({
+          id: s.id,
+          title: s.title,
+          description: s.description || '',
+          icon: getIcon(s.integration_provider || s.id),
+          type: s.step_type || 'manual',
+          provider: s.integration_provider,
+          enabled: s.is_enabled ?? true,
+          required: s.required ?? false,
+          documentUrl: s.document_url || '',
+          isCustom: !['slack', 'github', 'google', 'nda', 'handbook', 'manager'].includes(s.integration_provider || s.id),
+          stepOrder: s.step_order,
+        })))
+      } else {
+        // No steps in DB yet, use defaults with icons
+        setSteps(defaultSteps.map(s => ({ ...s, icon: getIcon(s.id) })))
+      }
+      setLoading(false)
+    }
+    loadSteps()
+  }, [supabase])
 
   const toggleStep = (id: string) => {
     setSteps(steps.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s))
@@ -118,6 +146,7 @@ export default function OnboardingSetupPage() {
 
   const addCustomStep = () => {
     if (!customStepTitle.trim()) return
+    const maxOrder = Math.max(...steps.map(s => s.stepOrder), 0)
     const newStep: OnboardingStepConfig = {
       id: `custom-${Date.now()}`,
       title: customStepTitle,
@@ -127,6 +156,7 @@ export default function OnboardingSetupPage() {
       enabled: true,
       required: false,
       isCustom: true,
+      stepOrder: maxOrder + 1,
     }
     setSteps([...steps, newStep])
     setCustomStepTitle('')
@@ -137,16 +167,101 @@ export default function OnboardingSetupPage() {
     setSteps(steps.filter(s => s.id !== id))
   }
 
+  const handleHandbookUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !orgId) return
+
+    if (file.type !== 'application/pdf') {
+      alert('Please upload a PDF file')
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File must be less than 10MB')
+      return
+    }
+
+    setUploadingHandbook(true)
+
+    const fileName = `${orgId}/handbook.pdf`
+    const { error: uploadError } = await supabase.storage
+      .from('company-assets')
+      .upload(fileName, file, { upsert: true })
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError)
+      alert('Failed to upload handbook. Make sure storage is configured.')
+      setUploadingHandbook(false)
+      return
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('company-assets')
+      .getPublicUrl(fileName)
+
+    setHandbookUrl(publicUrl)
+
+    // Save to organization
+    await supabase
+      .from('organizations')
+      .update({ handbook_url: publicUrl })
+      .eq('id', orgId)
+
+    setUploadingHandbook(false)
+  }
+
   const handleSave = async () => {
+    if (!orgId) return
     setIsSaving(true)
-    // TODO: Save to database
-    await new Promise(r => setTimeout(r, 1000))
+
+    try {
+      // Delete existing steps for this org
+      await supabase
+        .from('onboarding_steps')
+        .delete()
+        .eq('organization_id', orgId)
+
+      // Insert all current steps
+      const stepsToInsert = steps.map((s, index) => ({
+        organization_id: orgId,
+        title: s.title,
+        description: s.description,
+        category: s.type === 'integration' ? 'tools' : s.type === 'document' ? 'company' : 'team',
+        step_type: s.type,
+        integration_provider: s.provider || null,
+        document_url: s.documentUrl || null,
+        step_order: index + 1,
+        required: s.required,
+        is_enabled: s.enabled,
+      }))
+
+      const { error } = await supabase
+        .from('onboarding_steps')
+        .insert(stepsToInsert)
+
+      if (error) {
+        console.error('Save error:', error)
+        alert('Failed to save: ' + error.message)
+      } else {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } catch (err) {
+      console.error('Save error:', err)
+    }
+
     setIsSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
   }
 
   const enabledSteps = steps.filter(s => s.enabled)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -175,6 +290,66 @@ export default function OnboardingSetupPage() {
               {saved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
               {saved ? 'Saved!' : isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Employee Handbook Upload */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            Employee Handbook
+          </CardTitle>
+          <CardDescription>
+            Upload a PDF handbook that employees can access during onboarding
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              {handbookUrl ? (
+                <div className="flex items-center gap-3">
+                  <FileText className="h-8 w-8 text-primary" />
+                  <div>
+                    <p className="font-medium">Handbook uploaded</p>
+                    <a
+                      href={handbookUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      View handbook
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No handbook uploaded yet
+                </p>
+              )}
+            </div>
+            <div>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={handleHandbookUpload}
+                className="hidden"
+                id="handbook-upload"
+              />
+              <Button
+                variant="outline"
+                onClick={() => document.getElementById('handbook-upload')?.click()}
+                disabled={uploadingHandbook}
+              >
+                {uploadingHandbook ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {handbookUrl ? 'Replace' : 'Upload'} Handbook
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

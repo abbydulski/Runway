@@ -6,31 +6,63 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle2, Circle, User, Building2, Wrench, Users, MessageSquare, ExternalLink, Loader2 } from 'lucide-react'
+import {
+  CheckCircle2,
+  Circle,
+  MessageSquare,
+  Github,
+  Mail,
+  FileText,
+  Users,
+  BookOpen,
+  ExternalLink,
+  Loader2,
+  ChevronRight,
+  Download
+} from 'lucide-react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 
-interface SlackConfig {
-  invite_link?: string
+interface OnboardingStep {
+  id: string
+  title: string
+  description: string
+  step_type: 'integration' | 'document' | 'manual'
+  integration_provider?: string
+  document_url?: string
+  required: boolean
+  step_order: number
 }
 
-interface TeamConfig {
-  slack_config?: { channels?: string[] }
+interface StepProgress {
+  step_id: string
+  completed: boolean
+}
+
+// Get icon for step type
+function getStepIcon(step: OnboardingStep) {
+  if (step.integration_provider === 'slack') return <MessageSquare className="h-5 w-5" />
+  if (step.integration_provider === 'github') return <Github className="h-5 w-5" />
+  if (step.integration_provider === 'google_workspace') return <Mail className="h-5 w-5" />
+  if (step.step_type === 'document') return <FileText className="h-5 w-5" />
+  if (step.title.toLowerCase().includes('handbook')) return <BookOpen className="h-5 w-5" />
+  return <Users className="h-5 w-5" />
 }
 
 export default function OnboardingPage() {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
-  const [slackInviteLink, setSlackInviteLink] = useState<string | null>(null)
-  const [slackChannels, setSlackChannels] = useState<string[]>([])
-  const [slackJoined, setSlackJoined] = useState(false)
-  const [addingToChannels, setAddingToChannels] = useState(false)
-  const [channelsAdded, setChannelsAdded] = useState(false)
+  const [steps, setSteps] = useState<OnboardingStep[]>([])
+  const [progress, setProgress] = useState<StepProgress[]>([])
+  const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [userId, setUserId] = useState<string | null>(null)
   const [orgId, setOrgId] = useState<string | null>(null)
   const [teamId, setTeamId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [handbookUrl, setHandbookUrl] = useState<string | null>(null)
+  const [slackInviteLink, setSlackInviteLink] = useState<string | null>(null)
+  const [processingStep, setProcessingStep] = useState(false)
+  const [companyName, setCompanyName] = useState('')
 
   useEffect(() => {
     const loadOnboardingData = async () => {
@@ -62,23 +94,59 @@ export default function OnboardingPage() {
       setOrgId(profile?.organization_id)
       setTeamId(profile?.team_id)
 
-      // Get Slack invite link from org's integration
-      if (profile?.organization_id) {
-        const { data: slackIntegration } = await supabase
-          .from('integrations')
-          .select('config')
-          .eq('organization_id', profile.organization_id)
-          .eq('provider', 'slack')
-          .single()
-
-        if (slackIntegration?.config?.invite_link) {
-          setSlackInviteLink(slackIntegration.config.invite_link)
-        }
+      if (!profile?.organization_id) {
+        setLoading(false)
+        return
       }
 
-      // Get team's Slack channels
-      if (profile?.teams?.slack_config?.channels) {
-        setSlackChannels(profile.teams.slack_config.channels)
+      // Load organization info (handbook URL, company name)
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name, handbook_url')
+        .eq('id', profile.organization_id)
+        .single()
+
+      if (org) {
+        setCompanyName(org.name)
+        setHandbookUrl(org.handbook_url)
+      }
+
+      // Load Slack invite link
+      const { data: slackIntegration } = await supabase
+        .from('integrations')
+        .select('config')
+        .eq('organization_id', profile.organization_id)
+        .eq('provider', 'slack')
+        .single()
+
+      if (slackIntegration?.config?.invite_link) {
+        setSlackInviteLink(slackIntegration.config.invite_link)
+      }
+
+      // Load onboarding steps configured by founder
+      const { data: dbSteps } = await supabase
+        .from('onboarding_steps')
+        .select('*')
+        .eq('organization_id', profile.organization_id)
+        .eq('is_enabled', true)
+        .order('step_order')
+
+      if (dbSteps && dbSteps.length > 0) {
+        setSteps(dbSteps)
+      }
+
+      // Load user's progress
+      const { data: dbProgress } = await supabase
+        .from('user_onboarding_progress')
+        .select('step_id, completed')
+        .eq('user_id', user.id)
+
+      if (dbProgress) {
+        setProgress(dbProgress)
+        // Find first incomplete step
+        const completedIds = new Set(dbProgress.filter(p => p.completed).map(p => p.step_id))
+        const firstIncomplete = dbSteps?.findIndex(s => !completedIds.has(s.id)) ?? 0
+        setCurrentStepIndex(Math.max(0, firstIncomplete))
       }
 
       setLoading(false)
@@ -86,13 +154,46 @@ export default function OnboardingPage() {
     loadOnboardingData()
   }, [router, supabase])
 
-  const handleJoinedSlack = async () => {
-    setSlackJoined(true)
-    setAddingToChannels(true)
-    setError(null)
+  const isStepCompleted = (stepId: string) => {
+    return progress.some(p => p.step_id === stepId && p.completed)
+  }
+
+  const markStepComplete = async (stepId: string) => {
+    if (!userId) return
+    setProcessingStep(true)
+
+    // Upsert progress record
+    await supabase
+      .from('user_onboarding_progress')
+      .upsert({
+        user_id: userId,
+        step_id: stepId,
+        completed: true,
+        completed_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,step_id' })
+
+    // Update local state
+    setProgress(prev => {
+      const existing = prev.find(p => p.step_id === stepId)
+      if (existing) {
+        return prev.map(p => p.step_id === stepId ? { ...p, completed: true } : p)
+      }
+      return [...prev, { step_id: stepId, completed: true }]
+    })
+
+    // Move to next step
+    if (currentStepIndex < steps.length - 1) {
+      setCurrentStepIndex(currentStepIndex + 1)
+    }
+
+    setProcessingStep(false)
+  }
+
+  const handleSlackStep = async (stepId: string) => {
+    setProcessingStep(true)
 
     try {
-      const response = await fetch('/api/provisioning/trigger', {
+      await fetch('/api/provisioning/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,30 +202,28 @@ export default function OnboardingPage() {
           team_id: teamId,
         }),
       })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        setChannelsAdded(true)
-      } else {
-        setError(result.error || 'Failed to add to channels')
-      }
-    } catch (e) {
-      setError('Failed to connect to Slack')
+    } catch {
+      // Continue even if provisioning fails
     }
-    setAddingToChannels(false)
+
+    await markStepComplete(stepId)
   }
 
-  const handleComplete = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase
-        .from('users')
-        .update({ onboarding_completed: true })
-        .eq('id', user.id)
-    }
+  const handleFinishOnboarding = async () => {
+    if (!userId) return
+
+    await supabase
+      .from('users')
+      .update({ onboarding_completed: true })
+      .eq('id', userId)
+
     router.push('/employee')
   }
+
+  const completedCount = progress.filter(p => p.completed).length
+  const progressPercent = steps.length > 0 ? (completedCount / steps.length) * 100 : 0
+  const currentStep = steps[currentStepIndex]
+  const allComplete = steps.length > 0 && completedCount === steps.length
 
   if (loading) {
     return (
@@ -149,37 +248,116 @@ export default function OnboardingPage() {
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Welcome to the team! 🎉</h1>
+          <h1 className="text-3xl font-bold">Welcome to {companyName || 'the team'}! 🎉</h1>
           <p className="text-muted-foreground mt-2">
             Let&apos;s get you set up with all the tools you need
           </p>
         </div>
 
-        {/* Slack Integration Card */}
-        {slackInviteLink && (
-          <Card className={channelsAdded ? 'border-green-200 bg-green-50/50' : ''}>
+        {/* Progress Bar */}
+        {steps.length > 0 && (
+          <div className="mb-6">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-medium">{completedCount} of {steps.length} steps</span>
+            </div>
+            <Progress value={progressPercent} className="h-2" />
+          </div>
+        )}
+
+        {/* Handbook Card (if available) */}
+        {handbookUrl && (
+          <Card className="mb-4 border-primary/20 bg-primary/5">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <BookOpen className="h-6 w-6 text-primary" />
+                  <div>
+                    <p className="font-medium">Employee Handbook</p>
+                    <p className="text-sm text-muted-foreground">
+                      Review company policies and guidelines
+                    </p>
+                  </div>
+                </div>
+                <Button variant="outline" asChild>
+                  <a href={handbookUrl} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-4 w-4 mr-2" />
+                    View Handbook
+                  </a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step List */}
+        <div className="space-y-3 mb-6">
+          {steps.map((step, index) => {
+            const completed = isStepCompleted(step.id)
+            const isCurrent = index === currentStepIndex && !allComplete
+
+            return (
+              <Card
+                key={step.id}
+                className={`transition-all ${
+                  completed
+                    ? 'border-green-200 bg-green-50/50'
+                    : isCurrent
+                      ? 'border-primary ring-2 ring-primary/20'
+                      : 'opacity-60'
+                }`}
+              >
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-full ${completed ? 'bg-green-100' : isCurrent ? 'bg-primary/10' : 'bg-muted'}`}>
+                      {completed ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      ) : (
+                        getStepIcon(step)
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className={`font-medium ${completed ? 'text-green-700' : ''}`}>
+                          {step.title}
+                        </p>
+                        {step.required && !completed && (
+                          <Badge variant="secondary" className="text-xs">Required</Badge>
+                        )}
+                        {completed && (
+                          <Badge className="bg-green-500 text-xs">Complete</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{step.description}</p>
+                    </div>
+                    {isCurrent && !completed && (
+                      <ChevronRight className="h-5 w-5 text-primary" />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+
+        {/* Current Step Action Card */}
+        {currentStep && !allComplete && (
+          <Card className="border-primary">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Join Slack
-                {channelsAdded && <Badge className="bg-green-500">Complete</Badge>}
+                {getStepIcon(currentStep)}
+                {currentStep.title}
               </CardTitle>
-              <CardDescription>
-                Join our Slack workspace to connect with your team
-              </CardDescription>
+              <CardDescription>{currentStep.description}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!slackJoined ? (
-                <>
+              {/* Slack step */}
+              {currentStep.integration_provider === 'slack' && slackInviteLink ? (
+                <div className="space-y-4">
                   <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm mb-3">
-                      Click below to join our Slack workspace, then come back here to get added to your team channels.
+                    <p className="text-sm">
+                      Click below to join the Slack workspace, then mark this step as complete.
                     </p>
-                    {slackChannels.length > 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        You&apos;ll be added to: {slackChannels.map(c => `#${c}`).join(', ')}
-                      </p>
-                    )}
                   </div>
                   <div className="flex gap-3">
                     <Button asChild>
@@ -188,64 +366,91 @@ export default function OnboardingPage() {
                         Open Slack Invite
                       </a>
                     </Button>
-                    <Button variant="outline" onClick={handleJoinedSlack}>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSlackStep(currentStep.id)}
+                      disabled={processingStep}
+                    >
+                      {processingStep ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                       I&apos;ve Joined Slack
                     </Button>
                   </div>
-                </>
-              ) : addingToChannels ? (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Adding you to team channels...
                 </div>
-              ) : channelsAdded ? (
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                  You&apos;ve been added to your team&apos;s Slack channels!
+              ) : currentStep.step_type === 'document' && currentStep.document_url ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm">
+                      Review the document below, then mark this step as complete.
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button asChild>
+                      <a href={currentStep.document_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Open Document
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => markStepComplete(currentStep.id)}
+                      disabled={processingStep}
+                    >
+                      {processingStep ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                      Mark as Complete
+                    </Button>
+                  </div>
                 </div>
-              ) : error ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-destructive">{error}</p>
-                  <Button variant="outline" size="sm" onClick={handleJoinedSlack}>
-                    Try Again
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm">
+                      Complete this step and mark it as done when you&apos;re ready.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => markStepComplete(currentStep.id)}
+                    disabled={processingStep}
+                  >
+                    {processingStep ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                    Mark as Complete
                   </Button>
                 </div>
-              ) : null}
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* No Slack message */}
-        {!slackInviteLink && (
+        {/* No steps configured */}
+        {steps.length === 0 && (
           <Card>
-            <CardContent className="pt-6">
-              <p className="text-muted-foreground">
-                Your admin hasn&apos;t set up Slack integration yet. You can continue with onboarding.
+            <CardContent className="pt-6 text-center">
+              <p className="text-muted-foreground mb-4">
+                No onboarding steps have been configured yet.
               </p>
+              <Button onClick={handleFinishOnboarding}>
+                Continue to Dashboard
+              </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Other onboarding steps placeholder */}
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Complete Your Profile
-            </CardTitle>
-            <CardDescription>Add your information and preferences</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Coming soon...</p>
-          </CardContent>
-        </Card>
-
-        {/* Complete Button */}
-        <div className="mt-8 flex justify-center">
-          <Button size="lg" onClick={handleComplete}>
-            Complete Onboarding
-          </Button>
-        </div>
+        {/* All Complete */}
+        {allComplete && (
+          <Card className="border-green-200 bg-green-50/50">
+            <CardContent className="pt-6 text-center">
+              <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-green-700 mb-2">
+                You&apos;re all set! 🎉
+              </h2>
+              <p className="text-muted-foreground mb-4">
+                You&apos;ve completed all onboarding steps.
+              </p>
+              <Button size="lg" onClick={handleFinishOnboarding}>
+                Go to Dashboard
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   )

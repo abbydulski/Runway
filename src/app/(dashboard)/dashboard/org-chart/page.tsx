@@ -14,6 +14,15 @@ type TeamMember = {
   department: string | null
   avatar_url: string | null
   manager_id: string | null
+  team_id: string | null
+  teams?: { name: string } | null
+}
+
+function getTeamName(member: TeamMember): string {
+  if (member.teams?.name) return member.teams.name
+  if (member.department) return member.department
+  if (member.role === 'founder') return 'Leadership'
+  return 'General'
 }
 
 function buildOrgTree(members: TeamMember[]): OrgChartNode[] {
@@ -26,7 +35,7 @@ function buildOrgTree(members: TeamMember[]): OrgChartNode[] {
     id: founder.id,
     name: founder.name,
     position: founder.position || 'Founder',
-    department: founder.department || 'Leadership',
+    department: getTeamName(founder),
     avatar_url: founder.avatar_url || undefined,
     manager_id: undefined,
     children: employees
@@ -35,7 +44,7 @@ function buildOrgTree(members: TeamMember[]): OrgChartNode[] {
         id: emp.id,
         name: emp.name,
         position: emp.position || 'Team Member',
-        department: emp.department || 'General',
+        department: getTeamName(emp),
         avatar_url: emp.avatar_url || undefined,
         manager_id: emp.manager_id || undefined,
         children: [],
@@ -54,18 +63,18 @@ export default async function OrgChartPage() {
     .eq('id', user?.id)
     .single()
 
-  // Fetch team members from the same organization
+  // Fetch team members from the same organization with their team info
   const { data: teamMembers } = await supabase
     .from('users')
-    .select('*')
+    .select('*, teams(name)')
     .eq('organization_id', currentUser?.organization_id)
     .order('created_at', { ascending: true })
 
   const members: TeamMember[] = teamMembers || []
   const orgTree = buildOrgTree(members)
 
-  // Get unique departments
-  const departments = new Set(members.map(m => m.department).filter(Boolean))
+  // Get unique departments/teams
+  const departments = new Set(members.map(m => getTeamName(m)).filter(Boolean))
 
   return (
     <div className="space-y-6">

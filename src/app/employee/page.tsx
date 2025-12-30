@@ -19,10 +19,10 @@ export default async function EmployeeDashboard() {
     redirect('/login')
   }
 
-  // Get user profile
+  // Get user profile with team info
   const { data: profile } = await supabase
     .from('users')
-    .select('*, organizations(name)')
+    .select('*, organizations(name), teams(name)')
     .eq('id', user.id)
     .single()
 
@@ -31,11 +31,16 @@ export default async function EmployeeDashboard() {
     redirect('/dashboard')
   }
 
+  // Get team name from relationship
+  const teamName = Array.isArray(profile?.teams)
+    ? profile.teams[0]?.name
+    : profile?.teams?.name
+
   const employee = {
     name: profile?.name || 'Team Member',
     email: profile?.email || user.email || '',
     position: profile?.position || 'Team Member',
-    department: profile?.department || 'Not set',
+    department: teamName || profile?.department || 'Not assigned',
     companyName: profile?.organizations?.name || 'Your Company',
     startDate: profile?.created_at || new Date().toISOString(),
     avatar: getAvatarUrl(profile?.avatar_url),
