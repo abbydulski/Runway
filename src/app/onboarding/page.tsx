@@ -277,31 +277,6 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Handbook Card (if available) */}
-        {handbookUrl && (
-          <Card className="mb-4 border-primary/20 bg-primary/5">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <BookOpen className="h-6 w-6 text-primary" />
-                  <div>
-                    <p className="font-medium">Employee Handbook</p>
-                    <p className="text-sm text-muted-foreground">
-                      Review company policies and guidelines
-                    </p>
-                  </div>
-                </div>
-                <Button variant="outline" asChild>
-                  <a href={handbookUrl} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-4 w-4 mr-2" />
-                    View Handbook
-                  </a>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Step List */}
         <div className="space-y-3 mb-6">
           {steps.map((step, index) => {
