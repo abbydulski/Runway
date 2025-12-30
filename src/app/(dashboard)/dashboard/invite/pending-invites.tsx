@@ -24,7 +24,7 @@ export function PendingInvites({ invites }: PendingInvitesProps) {
 
   const copyInviteLink = async (invite: PendingInvite) => {
     const baseUrl = window.location.origin
-    const link = `${baseUrl}/signup?token=${invite.invite_token}`
+    const link = `${baseUrl}/join?token=${invite.invite_token}`
     await navigator.clipboard.writeText(link)
     setCopiedId(invite.id)
     setTimeout(() => setCopiedId(null), 2000)

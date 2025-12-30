@@ -52,7 +52,7 @@ export default async function InvitePage() {
 
   // Generate invite link
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const inviteLink = `${baseUrl}/signup?org=${profile.organization_id}`
+  const inviteLink = `${baseUrl}/join?org=${profile.organization_id}`
 
   return (
     <div className="space-y-6 max-w-4xl">

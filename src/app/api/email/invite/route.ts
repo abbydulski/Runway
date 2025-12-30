@@ -12,12 +12,12 @@ export async function POST(request: NextRequest) {
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const signupUrl = `${appUrl}/signup?token=${inviteToken}`
+    const signupUrl = `${appUrl}/join?token=${inviteToken}`
 
     const { data, error } = await resend.emails.send({
-      from: 'ASC <onboarding@resend.dev>',
+      from: 'Runway <onboarding@resend.dev>',
       to: email,
-      subject: `You're invited to join ${organizationName}`,
+      subject: `You're invited to join ${organizationName} on Runway`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -27,9 +27,9 @@ export async function POST(request: NextRequest) {
           </head>
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #000; font-size: 24px; margin: 0;">ASC</h1>
+              <h1 style="color: #000; font-size: 24px; margin: 0;">✈️ Runway</h1>
             </div>
-            
+
             <div style="background: #f9fafb; border-radius: 12px; padding: 30px; margin-bottom: 20px;">
               <h2 style="margin: 0 0 15px 0; color: #111;">You're invited! 🎉</h2>
               <p style="margin: 0 0 15px 0;">
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
                 Accept Invite
               </a>
             </div>
-            
+
             <p style="color: #666; font-size: 14px; text-align: center;">
               If you weren't expecting this invite, you can safely ignore this email.
             </p>
