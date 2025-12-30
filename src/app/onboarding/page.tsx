@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import {
   CheckCircle2,
   Circle,
@@ -18,7 +20,9 @@ import {
   ExternalLink,
   Loader2,
   ChevronRight,
-  Download
+  Download,
+  Eye,
+  FileSignature
 } from 'lucide-react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -63,6 +67,11 @@ export default function OnboardingPage() {
   const [slackInviteLink, setSlackInviteLink] = useState<string | null>(null)
   const [processingStep, setProcessingStep] = useState(false)
   const [companyName, setCompanyName] = useState('')
+
+  // Document viewing state
+  const [documentViewed, setDocumentViewed] = useState(false)
+  const [acknowledged, setAcknowledged] = useState(false)
+  const [showingDocument, setShowingDocument] = useState(false)
 
   useEffect(() => {
     const loadOnboardingData = async () => {
@@ -181,9 +190,12 @@ export default function OnboardingPage() {
       return [...prev, { step_id: stepId, completed: true }]
     })
 
-    // Move to next step
+    // Move to next step and reset document viewing state
     if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex(currentStepIndex + 1)
+      setDocumentViewed(false)
+      setAcknowledged(false)
+      setShowingDocument(false)
     }
 
     setProcessingStep(false)
@@ -378,27 +390,78 @@ export default function OnboardingPage() {
                 </div>
               ) : currentStep.step_type === 'document' && currentStep.document_url ? (
                 <div className="space-y-4">
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm">
-                      Review the document below, then mark this step as complete.
-                    </p>
-                  </div>
-                  <div className="flex gap-3">
-                    <Button asChild>
-                      <a href={currentStep.document_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Open Document
-                      </a>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => markStepComplete(currentStep.id)}
-                      disabled={processingStep}
-                    >
-                      {processingStep ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                      Mark as Complete
-                    </Button>
-                  </div>
+                  {!showingDocument ? (
+                    <>
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm">
+                          Please review this document carefully before proceeding.
+                        </p>
+                      </div>
+                      <Button onClick={() => { setShowingDocument(true); setDocumentViewed(true); }}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Document
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Inline PDF Viewer */}
+                      <div className="border rounded-lg overflow-hidden bg-white">
+                        <div className="bg-muted px-4 py-2 flex items-center justify-between border-b">
+                          <span className="text-sm font-medium flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            {currentStep.title}
+                          </span>
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={currentStep.document_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              Open in new tab
+                            </a>
+                          </Button>
+                        </div>
+                        <iframe
+                          src={`${currentStep.document_url}#toolbar=0`}
+                          className="w-full h-[400px]"
+                          title={currentStep.title}
+                        />
+                      </div>
+
+                      {/* Acknowledgment Section */}
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                          <FileSignature className="h-5 w-5 text-amber-600 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-medium text-amber-800">Acknowledgment Required</p>
+                            <p className="text-sm text-amber-700 mt-1">
+                              By checking the box below, you confirm that you have read and understood this document.
+                            </p>
+                            <div className="flex items-center gap-2 mt-3">
+                              <Checkbox
+                                id="acknowledge"
+                                checked={acknowledged}
+                                onCheckedChange={(checked) => setAcknowledged(checked === true)}
+                              />
+                              <Label htmlFor="acknowledge" className="text-sm text-amber-800 cursor-pointer">
+                                I have read and acknowledge this document
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={() => markStepComplete(currentStep.id)}
+                        disabled={processingStep || !acknowledged}
+                        className="w-full"
+                      >
+                        {processingStep ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                        )}
+                        {acknowledged ? 'Continue to Next Step' : 'Please acknowledge the document'}
+                      </Button>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
