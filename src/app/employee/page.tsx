@@ -37,9 +37,12 @@ export default async function EmployeeDashboard() {
   const teamName = teamData?.name
   const isFieldTeam = teamData?.team_type === 'field'
 
+  // Get organization data (could be array or single object)
+  const orgData = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations
+
   // Check if org has Ayer integration
-  const selectedIntegrations = profile?.organizations?.selected_integrations || []
-  const hasAyerIntegration = selectedIntegrations.includes('ayer')
+  const selectedIntegrations = orgData?.selected_integrations || []
+  const hasAyerIntegration = Array.isArray(selectedIntegrations) && selectedIntegrations.includes('ayer')
 
   // Show Ayer only for field team members when org has Ayer integration
   const showAyer = isFieldTeam && hasAyerIntegration
@@ -54,7 +57,7 @@ export default async function EmployeeDashboard() {
     email: profile?.email || user.email || '',
     position: profile?.position || 'Team Member',
     department: teamName || profile?.department || 'Not assigned',
-    companyName: profile?.organizations?.name || 'Your Company',
+    companyName: orgData?.name || 'Your Company',
     startDate: profile?.created_at || new Date().toISOString(),
     avatar: getAvatarUrl(profile?.avatar_url),
   }
