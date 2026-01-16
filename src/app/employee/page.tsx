@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getAvatarUrl } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/server'
+import { AyerTicketsCard, MOCK_AYER_TICKETS } from '@/components/ayer-tickets'
 
 export default async function EmployeeDashboard() {
   const supabase = await createClient()
@@ -22,7 +23,7 @@ export default async function EmployeeDashboard() {
   // Get user profile with team info
   const { data: profile } = await supabase
     .from('users')
-    .select('*, organizations(name), teams(name)')
+    .select('*, organizations(name, selected_integrations), teams(name, team_type)')
     .eq('id', user.id)
     .single()
 
@@ -31,10 +32,22 @@ export default async function EmployeeDashboard() {
     redirect('/dashboard')
   }
 
-  // Get team name from relationship
-  const teamName = Array.isArray(profile?.teams)
-    ? profile.teams[0]?.name
-    : profile?.teams?.name
+  // Get team name and type from relationship
+  const teamData = Array.isArray(profile?.teams) ? profile.teams[0] : profile?.teams
+  const teamName = teamData?.name
+  const isFieldTeam = teamData?.team_type === 'field'
+
+  // Check if org has Ayer integration
+  const selectedIntegrations = profile?.organizations?.selected_integrations || []
+  const hasAyerIntegration = selectedIntegrations.includes('ayer')
+
+  // Show Ayer only for field team members when org has Ayer integration
+  const showAyer = isFieldTeam && hasAyerIntegration
+
+  // Get tickets assigned to this user (mock - filter by name for demo)
+  const myTickets = MOCK_AYER_TICKETS.filter(t =>
+    t.assignee?.toLowerCase().includes(profile?.name?.split(' ')[0]?.toLowerCase() || '')
+  )
 
   const employee = {
     name: profile?.name || 'Team Member',
@@ -80,6 +93,18 @@ export default async function EmployeeDashboard() {
             Here&apos;s your personal dashboard
           </p>
         </div>
+
+        {/* Ayer Field Tickets - Only for field team members */}
+        {showAyer && (
+          <div className="mb-6">
+            <AyerTicketsCard
+              tickets={myTickets.length > 0 ? myTickets : MOCK_AYER_TICKETS.slice(0, 3)}
+              title="My Field Tickets"
+              description={myTickets.length > 0 ? "Your assigned tickets from Ayer" : "Recent tickets from your team"}
+              showAssignee={false}
+            />
+          </div>
+        )}
 
         {/* Profile Card */}
         <Card className="mb-6">

@@ -20,6 +20,7 @@ import {
 import { getAllDashboardData } from '@/lib/mock-data'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { AyerTicketsCard } from '@/components/ayer-tickets'
 
 // Consistent financial data matching the Financials page
 const FINANCIAL_DATA = {
@@ -47,14 +48,18 @@ export default async function DashboardPage() {
     { count: employeeCount },
     { count: pendingInvites },
     { count: integrationsCount },
-    { count: successfulProvisions }
+    { count: successfulProvisions },
+    { data: ayerIntegration }
   ] = await Promise.all([
     supabase.from('teams').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
     supabase.from('users').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
     supabase.from('invites').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'pending'),
     supabase.from('integrations').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('is_active', true),
     supabase.from('provisioning_logs').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'success'),
+    supabase.from('integrations').select('*').eq('organization_id', orgId).eq('provider', 'ayer').eq('is_active', true).single(),
   ])
+
+  const hasAyer = !!ayerIntegration
 
   return (
     <div className="space-y-6">
@@ -187,6 +192,14 @@ export default async function DashboardPage() {
           pending={data.deel.stats.pendingOnboarding}
         />
       </div>
+
+      {/* Ayer Field Tickets - Only show if Ayer is connected */}
+      {hasAyer && (
+        <AyerTicketsCard
+          title="Field Tickets Overview"
+          description="Latest tickets from Ayer field operations"
+        />
+      )}
 
       {/* Activity Sections */}
       <div className="grid gap-6 lg:grid-cols-2">

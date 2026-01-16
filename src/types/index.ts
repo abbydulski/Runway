@@ -171,11 +171,14 @@ export interface DashboardMetrics {
 }
 
 // Teams
+export type TeamType = 'regular' | 'field'
+
 export interface Team {
   id: string
   organization_id: string
   name: string
   description?: string
+  team_type: TeamType
   slack_config: SlackTeamConfig
   github_config: GitHubTeamConfig
   deel_config: DeelTeamConfig
@@ -197,7 +200,7 @@ export interface DeelTeamConfig {
 }
 
 // Integrations
-export type IntegrationProvider = 'slack' | 'github' | 'deel' | 'quickbooks' | 'google_workspace' | 'notion' | 'linear'
+export type IntegrationProvider = 'slack' | 'github' | 'deel' | 'quickbooks' | 'google_workspace' | 'notion' | 'linear' | 'ayer' | 'microsoft_365' | 'stripe' | 'gusto' | 'mercury' | '1password'
 
 export interface Integration {
   id: string

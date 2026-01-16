@@ -24,7 +24,8 @@ import {
   Key,
   Mail,
   Upload,
-  ImageIcon
+  ImageIcon,
+  Ticket
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -33,7 +34,7 @@ interface IntegrationOption {
   name: string
   description: string
   icon: React.ReactNode
-  category: 'communication' | 'development' | 'finance' | 'hr' | 'productivity' | 'security'
+  category: 'communication' | 'development' | 'finance' | 'hr' | 'productivity' | 'security' | 'field_ops'
   recommended?: boolean
 }
 
@@ -123,6 +124,14 @@ const AVAILABLE_INTEGRATIONS: IntegrationOption[] = [
     description: 'Provision password vault access via SCIM',
     icon: <Key className="h-5 w-5" />,
     category: 'security',
+  },
+  // Field Operations
+  {
+    id: 'ayer',
+    name: 'Ayer',
+    description: 'Field ticketing - track linear feet, pricing & job status',
+    icon: <Ticket className="h-5 w-5" />,
+    category: 'field_ops',
   },
 ]
 
@@ -565,6 +574,42 @@ export default function SetupPage() {
                 <h3 className="text-sm font-medium text-muted-foreground mb-3">HR & Payroll</h3>
                 <div className="space-y-2">
                   {AVAILABLE_INTEGRATIONS.filter(i => i.category === 'hr').map(integration => (
+                    <label
+                      key={integration.id}
+                      className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-colors ${
+                        selectedIntegrations.includes(integration.id)
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <Checkbox
+                        checked={selectedIntegrations.includes(integration.id)}
+                        onCheckedChange={() => toggleIntegration(integration.id)}
+                      />
+                      <div className="p-2 rounded-lg bg-muted">
+                        {integration.icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{integration.name}</span>
+                          {integration.recommended && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                              Recommended
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{integration.description}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Field Operations */}
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Field Operations</h3>
+                <div className="space-y-2">
+                  {AVAILABLE_INTEGRATIONS.filter(i => i.category === 'field_ops').map(integration => (
                     <label
                       key={integration.id}
                       className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-colors ${

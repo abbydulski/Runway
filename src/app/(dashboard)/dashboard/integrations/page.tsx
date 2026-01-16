@@ -117,6 +117,14 @@ const ALL_INTEGRATIONS: Record<string, IntegrationConfig> = {
     color: 'bg-blue-700',
     docsUrl: 'https://developer.1password.com/',
   },
+  ayer: {
+    provider: 'ayer' as IntegrationProvider,
+    name: 'Ayer',
+    description: 'Field ticketing system - track linear feet, pricing, hours, and ticket status.',
+    icon: '🎫',
+    color: 'bg-amber-600',
+    docsUrl: '#',
+  },
 }
 
 // Integration Card Component

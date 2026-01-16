@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Plus, Pencil, Trash2, Users, Slack, Github, Briefcase } from 'lucide-react'
-import type { Team } from '@/types'
+import { Plus, Pencil, Trash2, Users, Slack, Github, Briefcase, Ticket } from 'lucide-react'
+import type { Team, TeamType } from '@/types'
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([])
@@ -19,6 +19,7 @@ export default function TeamsPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    team_type: 'regular' as TeamType,
     slack_channels: '',
     github_teams: '',
     contract_type: 'contractor' as 'contractor' | 'employee',
@@ -56,6 +57,7 @@ export default function TeamsPage() {
     const teamData = {
       name: formData.name,
       description: formData.description || null,
+      team_type: formData.team_type,
       organization_id: profile.organization_id,
       slack_config: { channels: formData.slack_channels.split(',').map(c => c.trim()).filter(Boolean) },
       github_config: { teams: formData.github_teams.split(',').map(t => t.trim()).filter(Boolean) },
@@ -80,7 +82,7 @@ export default function TeamsPage() {
   }
 
   function resetForm() {
-    setFormData({ name: '', description: '', slack_channels: '', github_teams: '', contract_type: 'contractor' })
+    setFormData({ name: '', description: '', team_type: 'regular', slack_channels: '', github_teams: '', contract_type: 'contractor' })
     setEditingTeam(null)
     setIsCreateOpen(false)
   }
@@ -89,6 +91,7 @@ export default function TeamsPage() {
     setFormData({
       name: team.name,
       description: team.description || '',
+      team_type: team.team_type || 'regular',
       slack_channels: team.slack_config.channels.join(', '),
       github_teams: team.github_config.teams.join(', '),
       contract_type: team.deel_config.contract_type,
@@ -125,6 +128,27 @@ export default function TeamsPage() {
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Input id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Optional description" />
+              </div>
+              <div className="space-y-2">
+                <Label>Team Type</Label>
+                <div className="flex gap-4">
+                  <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${formData.team_type === 'regular' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
+                    <input type="radio" className="hidden" checked={formData.team_type === 'regular'} onChange={() => setFormData({ ...formData, team_type: 'regular' })} />
+                    <Users className="h-4 w-4" />
+                    <div>
+                      <p className="font-medium text-sm">Regular</p>
+                      <p className="text-xs text-muted-foreground">Office or remote team</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${formData.team_type === 'field' ? 'border-amber-500 bg-amber-50' : 'border-border hover:border-amber-500/50'}`}>
+                    <input type="radio" className="hidden" checked={formData.team_type === 'field'} onChange={() => setFormData({ ...formData, team_type: 'field' })} />
+                    <Ticket className="h-4 w-4 text-amber-600" />
+                    <div>
+                      <p className="font-medium text-sm">Field Team</p>
+                      <p className="text-xs text-muted-foreground">Access to Ayer tickets</p>
+                    </div>
+                  </label>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="slack">Slack Channels</Label>
@@ -179,12 +203,22 @@ export default function TeamsPage() {
 }
 
 function TeamCard({ team, onEdit, onDelete }: { team: Team; onEdit: () => void; onDelete: () => void }) {
+  const isFieldTeam = team.team_type === 'field'
+
   return (
-    <Card>
+    <Card className={isFieldTeam ? 'border-amber-200' : ''}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle>{team.name}</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>{team.name}</CardTitle>
+              {isFieldTeam && (
+                <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                  <Ticket className="h-3 w-3 mr-1" />
+                  Field
+                </Badge>
+              )}
+            </div>
             {team.description && <CardDescription>{team.description}</CardDescription>}
           </div>
           <div className="flex gap-1">
