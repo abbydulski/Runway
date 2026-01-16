@@ -24,6 +24,7 @@ import {
   Layers,
   Key,
   Mail,
+  Ticket,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -58,6 +59,7 @@ const ALL_INTEGRATIONS: Record<string, { name: string; href: string; icon: Lucid
   onepassword: { name: '1Password', href: '/dashboard/1password', icon: Key },
   google_workspace: { name: 'Google', href: '/dashboard/google', icon: Mail },
   microsoft_365: { name: 'Microsoft', href: '/dashboard/microsoft', icon: Mail },
+  ayer: { name: 'Ayer', href: '/dashboard/ayer', icon: Ticket },
 }
 
 export function Sidebar() {
