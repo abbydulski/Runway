@@ -23,7 +23,7 @@ export default async function EmployeeDashboard() {
   // Get user profile with team info
   const { data: profile } = await supabase
     .from('users')
-    .select('*, organizations(name, selected_integrations), teams(name)')
+    .select('*, organizations(name, selected_integrations), teams(name, team_type)')
     .eq('id', user.id)
     .single()
 
@@ -32,17 +32,17 @@ export default async function EmployeeDashboard() {
     redirect('/dashboard')
   }
 
-  // Get team name from relationship
+  // Get team name and type from relationship
   const teamData = Array.isArray(profile?.teams) ? profile.teams[0] : profile?.teams
   const teamName = teamData?.name
+  const isFieldTeam = teamData?.team_type === 'field'
 
   // Check if org has Ayer integration
   const selectedIntegrations = profile?.organizations?.selected_integrations || []
   const hasAyerIntegration = selectedIntegrations.includes('ayer')
 
-  // For now, show Ayer to all employees if org has it enabled
-  // (Field team filtering requires team_type column migration)
-  const showAyer = hasAyerIntegration
+  // Show Ayer only for field team members when org has Ayer integration
+  const showAyer = isFieldTeam && hasAyerIntegration
 
   // Get tickets assigned to this user (mock - filter by name for demo)
   const myTickets = MOCK_AYER_TICKETS.filter(t =>
