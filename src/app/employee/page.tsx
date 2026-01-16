@@ -8,7 +8,41 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getAvatarUrl } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/server'
-import { AyerTicketsCard, MOCK_AYER_TICKETS } from '@/components/ayer-tickets'
+import { AyerTicketsCard } from '@/components/ayer-tickets'
+import type { AyerTicket } from '@/components/ayer-tickets'
+
+// Mock tickets for employee dashboard
+const EMPLOYEE_TICKETS: AyerTicket[] = [
+  {
+    id: 'AYR-001',
+    location: '123 Main St, Austin TX',
+    linearFeet: 450,
+    price: 2250,
+    hoursWorked: 4.5,
+    status: 'completed',
+    assignee: 'Mike Johnson',
+    createdAt: '2024-01-15',
+  },
+  {
+    id: 'AYR-002',
+    location: '456 Oak Ave, Dallas TX',
+    linearFeet: 320,
+    price: 1600,
+    hoursWorked: 3.0,
+    status: 'in_progress',
+    assignee: 'Sarah Chen',
+    createdAt: '2024-01-16',
+  },
+  {
+    id: 'AYR-003',
+    location: '789 Pine Rd, Houston TX',
+    linearFeet: 180,
+    price: 900,
+    hoursWorked: null,
+    status: 'open',
+    createdAt: '2024-01-17',
+  },
+]
 
 export default async function EmployeeDashboard() {
   const supabase = await createClient()
@@ -48,7 +82,7 @@ export default async function EmployeeDashboard() {
   const showAyer = isFieldTeam && hasAyerIntegration
 
   // Get tickets assigned to this user (mock - filter by name for demo)
-  const myTickets = MOCK_AYER_TICKETS.filter(t =>
+  const myTickets = EMPLOYEE_TICKETS.filter(t =>
     t.assignee?.toLowerCase().includes(profile?.name?.split(' ')[0]?.toLowerCase() || '')
   )
 
@@ -101,7 +135,7 @@ export default async function EmployeeDashboard() {
         {showAyer && (
           <div className="mb-6">
             <AyerTicketsCard
-              tickets={myTickets.length > 0 ? myTickets : MOCK_AYER_TICKETS.slice(0, 3)}
+              tickets={myTickets.length > 0 ? myTickets : EMPLOYEE_TICKETS}
               title="My Field Tickets"
               description={myTickets.length > 0 ? "Your assigned tickets from Ayer" : "Recent tickets from your team"}
               showAssignee={false}
