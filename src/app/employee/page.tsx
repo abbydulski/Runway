@@ -20,10 +20,10 @@ export default async function EmployeeDashboard() {
     redirect('/login')
   }
 
-  // Get user profile with team info
+  // Get user profile with team info (team_type may not exist yet)
   const { data: profile } = await supabase
     .from('users')
-    .select('*, organizations(name, selected_integrations), teams(name, team_type)')
+    .select('*, organizations(name, selected_integrations), teams(name)')
     .eq('id', user.id)
     .single()
 
@@ -32,10 +32,24 @@ export default async function EmployeeDashboard() {
     redirect('/dashboard')
   }
 
-  // Get team name and type from relationship
+  // Get team name from relationship
   const teamData = Array.isArray(profile?.teams) ? profile.teams[0] : profile?.teams
   const teamName = teamData?.name
-  const isFieldTeam = teamData?.team_type === 'field'
+
+  // Try to get team_type separately (column may not exist yet)
+  let isFieldTeam = false
+  if (profile?.team_id) {
+    try {
+      const { data: teamWithType } = await supabase
+        .from('teams')
+        .select('team_type')
+        .eq('id', profile.team_id)
+        .single()
+      isFieldTeam = teamWithType?.team_type === 'field'
+    } catch {
+      // team_type column doesn't exist yet, ignore
+    }
+  }
 
   // Check if org has Ayer integration
   const selectedIntegrations = profile?.organizations?.selected_integrations || []
