@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import {
   Target,
   TrendingUp,
@@ -18,10 +17,8 @@ import {
   Rocket,
   AlertTriangle,
   CheckCircle,
-  Save,
   RotateCcw,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 interface Metric {
   id: string
@@ -63,13 +60,24 @@ type MetricValues = Record<string, number>
 
 export default function ScorecardPage() {
   const [values, setValues] = useState<MetricValues>({})
-  const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const supabase = createClient()
 
   useEffect(() => {
     loadSavedValues()
   }, [])
+
+  // Auto-save when values change (debounced)
+  useEffect(() => {
+    if (Object.keys(values).length === 0) return
+
+    const timeout = setTimeout(() => {
+      const data = { values, savedAt: new Date().toISOString() }
+      localStorage.setItem('scorecard_values', JSON.stringify(data))
+      setLastSaved(new Date())
+    }, 500) // Save 500ms after last change
+
+    return () => clearTimeout(timeout)
+  }, [values])
 
   async function loadSavedValues() {
     // For now, load from localStorage. Later can be saved to Supabase
@@ -79,15 +87,6 @@ export default function ScorecardPage() {
       setValues(parsed.values || {})
       setLastSaved(parsed.savedAt ? new Date(parsed.savedAt) : null)
     }
-  }
-
-  async function saveValues() {
-    setSaving(true)
-    // Save to localStorage for now
-    const data = { values, savedAt: new Date().toISOString() }
-    localStorage.setItem('scorecard_values', JSON.stringify(data))
-    setLastSaved(new Date())
-    setSaving(false)
   }
 
   function resetValues() {
@@ -148,17 +147,14 @@ export default function ScorecardPage() {
         </div>
         <div className="flex items-center gap-3">
           {lastSaved && (
-            <span className="text-sm text-muted-foreground">
-              Last saved: {lastSaved.toLocaleTimeString()}
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <CheckCircle className="h-3 w-3 text-green-500" />
+              Auto-saved {lastSaved.toLocaleTimeString()}
             </span>
           )}
           <Button variant="outline" size="sm" onClick={resetValues}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
-          </Button>
-          <Button onClick={saveValues} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>
