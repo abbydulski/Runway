@@ -25,6 +25,7 @@ import {
   Key,
   Mail,
   Ticket,
+  Target,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -35,6 +36,7 @@ import type { LucideIcon } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Scorecard', href: '/dashboard/scorecard', icon: Target },
   { name: 'Financials', href: '/dashboard/financials', icon: DollarSign },
   { name: 'Team', href: '/dashboard/team', icon: Users },
   { name: 'Org Chart', href: '/dashboard/org-chart', icon: Users },
