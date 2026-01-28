@@ -247,6 +247,7 @@ export default function IntegrationsPage() {
 function IntegrationsContent() {
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([])
+  const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -291,6 +292,8 @@ function IntegrationsContent() {
         .single()
 
       if (profile?.organization_id) {
+        setOrganizationId(profile.organization_id)
+
         const { data: org } = await supabase
           .from('organizations')
           .select('selected_integrations')
@@ -349,9 +352,32 @@ function IntegrationsContent() {
 
   async function handleConnect(provider: IntegrationProvider) {
     setConnecting(provider)
-    
-    // Redirect to OAuth flow (we'll implement these endpoints)
-    window.location.href = `/api/integrations/${provider}/connect`
+
+    // Providers with real OAuth flows
+    const oauthProviders = ['slack', 'github', 'quickbooks', 'deel']
+
+    if (oauthProviders.includes(provider)) {
+      // Redirect to OAuth flow
+      window.location.href = `/api/integrations/${provider}/connect`
+    } else {
+      // Mock connect for demo - just create an integration record
+      if (!organizationId) {
+        setConnecting(null)
+        return
+      }
+
+      await supabase.from('integrations').insert({
+        organization_id: organizationId,
+        provider,
+        access_token: 'mock_token',
+        provider_data: { mock: true },
+        config: {},
+      })
+
+      setMessage({ type: 'success', text: `${provider} connected successfully!` })
+      fetchIntegrations()
+      setConnecting(null)
+    }
   }
 
   async function handleDisconnect(provider: IntegrationProvider) {
