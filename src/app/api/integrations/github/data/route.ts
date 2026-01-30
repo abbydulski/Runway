@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-const GITHUB_ORG = 'Advanced-Spade'
+const GITHUB_ORG = 'advancedspade'
 
 interface GitHubPR {
   id: number
