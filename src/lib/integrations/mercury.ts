@@ -77,16 +77,24 @@ export async function fetchMercuryData(days: number = 7): Promise<MercuryData | 
     // Sort by date
     allTransactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-    // Calculate stats
+    // Calculate stats (excluding treasury transfers)
     const totalBalance = accounts.reduce((sum: number, acc: MercuryAccount) => sum + (acc.currentBalance || 0), 0)
     const availableBalance = accounts.reduce((sum: number, acc: MercuryAccount) => sum + (acc.availableBalance || 0), 0)
-    
+
+    // Helper to check for treasury transfers inline
+    const isTreasury = (tx: MercuryTransaction) => {
+      const kind = (tx.kind || '').toLowerCase()
+      const desc = (tx.bankDescription || '').toLowerCase()
+      const cp = (tx.counterpartyName || '').toLowerCase()
+      return kind.includes('treasury') || desc.includes('treasury') || cp.includes('treasury')
+    }
+
     const weeklySpend = allTransactions
-      .filter(t => t.amount < 0)
+      .filter(t => t.amount < 0 && !isTreasury(t))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-    
+
     const weeklyRevenue = allTransactions
-      .filter(t => t.amount > 0)
+      .filter(t => t.amount > 0 && !isTreasury(t))
       .reduce((sum, t) => sum + t.amount, 0)
 
     return {
@@ -115,6 +123,19 @@ export function isRampPayment(transaction: MercuryTransaction): boolean {
          description.includes('ramp') ||
          counterparty.includes('ramp financial') ||
          description.includes('ramp financial')
+}
+
+// Check if a Mercury transaction is a treasury transfer (internal movement, not real spend/revenue)
+export function isTreasuryTransfer(transaction: MercuryTransaction): boolean {
+  const kind = (transaction.kind || '').toLowerCase()
+  const description = (transaction.bankDescription || '').toLowerCase()
+  const counterparty = (transaction.counterpartyName || '').toLowerCase()
+
+  return kind.includes('treasury') ||
+         description.includes('treasury') ||
+         description.includes('transfer to treasury') ||
+         description.includes('transfer from treasury') ||
+         counterparty.includes('treasury')
 }
 
 // Get the start of the week (Sunday) for a given date
@@ -153,8 +174,13 @@ export function groupTransactionsByWeek(transactions: MercuryTransaction[], week
     })
   }
 
-  // Group transactions
+  // Group transactions (excluding treasury transfers)
   for (const tx of transactions) {
+    // Skip treasury transfers - they're internal movements, not real spend/revenue
+    if (isTreasuryTransfer(tx)) {
+      continue
+    }
+
     const txDate = new Date(tx.createdAt)
     const weekStart = getWeekStart(txDate)
 
