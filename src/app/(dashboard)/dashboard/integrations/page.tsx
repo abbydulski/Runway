@@ -261,6 +261,8 @@ function IntegrationsContent() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [slackInviteLink, setSlackInviteLink] = useState('')
   const [savingSlackLink, setSavingSlackLink] = useState(false)
+  const [mercuryConnected, setMercuryConnected] = useState(false)
+  const [rampConnected, setRampConnected] = useState(false)
   const supabase = createClient()
   const searchParams = useSearchParams()
 
@@ -326,6 +328,22 @@ function IntegrationsContent() {
         setSlackInviteLink(slackIntegration.config.invite_link)
       }
     }
+
+    // Check Mercury and Ramp connection status (use API keys, not just DB)
+    try {
+      const [mercuryRes, rampRes] = await Promise.all([
+        fetch('/api/integrations/mercury/status'),
+        fetch('/api/integrations/ramp/status'),
+      ])
+      const mercuryStatus = await mercuryRes.json()
+      const rampStatus = await rampRes.json()
+      setMercuryConnected(mercuryStatus.connected)
+      setRampConnected(rampStatus.connected)
+    } catch {
+      setMercuryConnected(false)
+      setRampConnected(false)
+    }
+
     setLoading(false)
   }
 
@@ -351,11 +369,32 @@ function IntegrationsContent() {
   }
 
   function isConnected(provider: IntegrationProvider): boolean {
+    // Mercury and Ramp use API keys from env, check via status endpoints
+    if (provider === 'mercury') {
+      return mercuryConnected
+    }
+    if (provider === 'ramp') {
+      return rampConnected
+    }
     return integrations.some(i => i.provider === provider && i.is_active)
   }
 
   function getIntegration(provider: IntegrationProvider): Integration | undefined {
     return integrations.find(i => i.provider === provider)
+  }
+
+  // Helper to add integration to selected_integrations for sidebar
+  async function addToSelectedIntegrations(provider: string) {
+    if (!organizationId) return
+    if (selectedIntegrations.includes(provider)) return
+
+    const newSelected = [...selectedIntegrations, provider]
+    await supabase
+      .from('organizations')
+      .update({ selected_integrations: newSelected })
+      .eq('id', organizationId)
+
+    setSelectedIntegrations(newSelected)
   }
 
   async function handleConnect(provider: IntegrationProvider) {
@@ -364,9 +403,26 @@ function IntegrationsContent() {
     // Providers with real OAuth flows
     const oauthProviders = ['slack', 'github', 'quickbooks', 'deel']
 
+    // Providers that use API keys from environment variables
+    const apiKeyProviders = ['mercury', 'ramp']
+
     if (oauthProviders.includes(provider)) {
+      // Add to selected integrations before redirecting to OAuth
+      await addToSelectedIntegrations(provider)
       // Redirect to OAuth flow
       window.location.href = `/api/integrations/${provider}/connect`
+    } else if (apiKeyProviders.includes(provider)) {
+      // These use API keys - add to sidebar and show instructions
+      await addToSelectedIntegrations(provider)
+      const envVars = provider === 'mercury'
+        ? 'MERCURY_API_KEY'
+        : 'RAMP_CLIENT_ID and RAMP_CLIENT_SECRET'
+      setMessage({
+        type: 'success',
+        text: `${provider.charAt(0).toUpperCase() + provider.slice(1)} connects via API key. Add ${envVars} to your environment variables.`
+      })
+      fetchIntegrations() // Refresh to check connection status
+      setConnecting(null)
     } else {
       // Mock connect for demo - just create an integration record
       if (!organizationId) {
@@ -381,6 +437,9 @@ function IntegrationsContent() {
         provider_data: { mock: true },
         config: {},
       })
+
+      // Add to selected integrations for sidebar
+      await addToSelectedIntegrations(provider)
 
       setMessage({ type: 'success', text: `${provider} connected successfully!` })
       fetchIntegrations()
