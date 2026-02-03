@@ -401,10 +401,10 @@ function IntegrationsContent() {
     setConnecting(provider)
 
     // Providers with real OAuth flows
-    const oauthProviders = ['slack', 'github', 'quickbooks', 'deel']
+    const oauthProviders = ['slack', 'github', 'quickbooks', 'deel', 'ramp']
 
-    // Providers that use API keys from environment variables
-    const apiKeyProviders = ['mercury', 'ramp']
+    // Providers that use API keys from environment variables (no OAuth)
+    const apiKeyProviders = ['mercury']
 
     if (oauthProviders.includes(provider)) {
       // Add to selected integrations before redirecting to OAuth
@@ -412,15 +412,28 @@ function IntegrationsContent() {
       // Redirect to OAuth flow
       window.location.href = `/api/integrations/${provider}/connect`
     } else if (apiKeyProviders.includes(provider)) {
-      // These use API keys - add to sidebar and show instructions
+      // These use API keys - check if already connected, then add to sidebar
       await addToSelectedIntegrations(provider)
-      const envVars = provider === 'mercury'
-        ? 'MERCURY_API_KEY'
-        : 'RAMP_CLIENT_ID and RAMP_CLIENT_SECRET'
-      setMessage({
-        type: 'success',
-        text: `${provider.charAt(0).toUpperCase() + provider.slice(1)} connects via API key. Add ${envVars} to your environment variables.`
-      })
+
+      // Check if the API keys are already configured and working
+      const statusRes = await fetch(`/api/integrations/${provider}/status`)
+      const status = await statusRes.json()
+
+      if (status.connected) {
+        setMessage({
+          type: 'success',
+          text: `${provider.charAt(0).toUpperCase() + provider.slice(1)} connected successfully!`
+        })
+      } else {
+        const envVars = provider === 'mercury'
+          ? 'MERCURY_API_KEY'
+          : 'RAMP_CLIENT_ID and RAMP_CLIENT_SECRET'
+        setMessage({
+          type: 'error',
+          text: `${provider.charAt(0).toUpperCase() + provider.slice(1)} not configured. Add ${envVars} to your environment variables.`
+        })
+      }
+
       fetchIntegrations() // Refresh to check connection status
       setConnecting(null)
     } else {

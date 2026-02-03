@@ -1,41 +1,38 @@
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-const RAMP_API_URL = 'https://api.ramp.com/developer/v1'
-
 export async function GET() {
-  const clientId = process.env.RAMP_CLIENT_ID
-  const clientSecret = process.env.RAMP_CLIENT_SECRET
+  const supabase = await createClient()
 
-  if (!clientId || !clientSecret) {
-    return NextResponse.json({ connected: false, reason: 'No Ramp credentials configured' })
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ connected: false, reason: 'Not authenticated' })
   }
 
-  try {
-    // Try to get an access token using client credentials
-    // This verifies the credentials are valid
-    const tokenRes = await fetch('https://api.ramp.com/developer/v1/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: clientId,
-        client_secret: clientSecret,
-        scope: 'transactions:read cards:read users:read business:read',
-      }),
-    })
+  // Get user's organization
+  const { data: profile } = await supabase
+    .from('users')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single()
 
-    if (tokenRes.ok) {
-      return NextResponse.json({ connected: true })
-    } else {
-      const error = await tokenRes.text()
-      console.error('Ramp token error:', error)
-      return NextResponse.json({ connected: false, reason: 'Invalid credentials' })
-    }
-  } catch (error) {
-    console.error('Ramp status check error:', error)
-    return NextResponse.json({ connected: false, reason: 'Connection error' })
+  if (!profile?.organization_id) {
+    return NextResponse.json({ connected: false, reason: 'No organization' })
   }
+
+  // Check if there's an active Ramp integration with a valid token
+  const { data: integration } = await supabase
+    .from('integrations')
+    .select('access_token, is_active')
+    .eq('organization_id', profile.organization_id)
+    .eq('provider', 'ramp')
+    .single()
+
+  if (integration?.access_token && integration?.is_active) {
+    return NextResponse.json({ connected: true })
+  }
+
+  return NextResponse.json({ connected: false, reason: 'Not connected' })
 }
 
