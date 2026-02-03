@@ -200,7 +200,7 @@ export interface DeelTeamConfig {
 }
 
 // Integrations
-export type IntegrationProvider = 'slack' | 'github' | 'deel' | 'quickbooks' | 'google_workspace' | 'notion' | 'linear' | 'ayer' | 'microsoft_365' | 'stripe' | 'gusto' | 'mercury' | '1password'
+export type IntegrationProvider = 'slack' | 'github' | 'deel' | 'quickbooks' | 'google_workspace' | 'notion' | 'linear' | 'ayer' | 'microsoft_365' | 'stripe' | 'gusto' | 'mercury' | 'ramp' | '1password'
 
 export interface Integration {
   id: string

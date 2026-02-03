@@ -54,6 +54,7 @@ const ALL_INTEGRATIONS: Record<string, { name: string; href: string; icon: Lucid
   quickbooks: { name: 'QuickBooks', href: '/dashboard/quickbooks', icon: Receipt },
   deel: { name: 'Deel', href: '/dashboard/deel', icon: Briefcase },
   mercury: { name: 'Mercury', href: '/dashboard/mercury', icon: Landmark },
+  ramp: { name: 'Ramp', href: '/dashboard/ramp', icon: CreditCard },
   stripe: { name: 'Stripe', href: '/dashboard/stripe', icon: CreditCard },
   notion: { name: 'Notion', href: '/dashboard/notion', icon: FileText },
   linear: { name: 'Linear', href: '/dashboard/linear', icon: Layers },

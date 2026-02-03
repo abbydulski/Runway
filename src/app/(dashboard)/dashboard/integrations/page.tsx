@@ -109,6 +109,14 @@ const ALL_INTEGRATIONS: Record<string, IntegrationConfig> = {
     color: 'bg-slate-800',
     docsUrl: 'https://mercury.com/',
   },
+  ramp: {
+    provider: 'ramp' as IntegrationProvider,
+    name: 'Ramp',
+    description: 'Corporate cards and expense management.',
+    icon: '💳',
+    color: 'bg-emerald-600',
+    docsUrl: 'https://docs.ramp.com/',
+  },
   onepassword: {
     provider: '1password' as IntegrationProvider,
     name: '1Password',

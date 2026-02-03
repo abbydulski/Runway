@@ -16,17 +16,35 @@ import {
   Link2,
   CheckCircle,
   AlertTriangle,
+  Flame,
+  Receipt,
+  Percent,
+  Banknote,
+  FileText,
 } from 'lucide-react'
 import { getAllDashboardData } from '@/lib/mock-data'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { AyerTicketsCard } from '@/components/ayer-tickets'
+import { WeeklyTrendsChart } from '@/components/dashboard/weekly-trends-chart'
+import { fetchMercuryData, isRampPayment, groupTransactionsByWeek } from '@/lib/integrations/mercury'
+import { fetchRampData, groupRampTransactionsByWeek } from '@/lib/integrations/ramp'
 
 // Consistent financial data matching the Financials page
 const FINANCIAL_DATA = {
   cashBalance: 847000,
   monthlyBurn: 62000,
   runway: 13.7,
+}
+
+function formatCurrency(amount: number): string {
+  if (amount >= 1000000) {
+    return `$${(amount / 1000000).toFixed(1)}M`
+  }
+  if (amount >= 1000) {
+    return `$${(amount / 1000).toFixed(1)}k`
+  }
+  return `$${amount.toFixed(0)}`
 }
 
 export default async function DashboardPage() {
@@ -61,6 +79,46 @@ export default async function DashboardPage() {
 
   const hasAyer = !!ayerIntegration
 
+  // Fetch Mercury and Ramp data for weekly metrics (8 weeks for trends)
+  const [mercuryData8Weeks, rampData8Weeks] = await Promise.all([
+    fetchMercuryData(56), // Last 8 weeks (56 days)
+    orgId ? fetchRampData(orgId, 56) : null,
+  ])
+
+  // Group transactions by week for trends
+  const mercuryWeekly = mercuryData8Weeks ? groupTransactionsByWeek(mercuryData8Weeks.transactions, 8) : []
+  const rampWeekly = rampData8Weeks ? groupRampTransactionsByWeek(rampData8Weeks.transactions, 8) : []
+
+  // Combine Mercury and Ramp weekly data for trends
+  const weeklyTrendsData = mercuryWeekly.map((mercuryWeek, index) => {
+    const rampWeek = rampWeekly[index]
+    const weeklyBurn = mercuryWeek.spendExcludingRamp + (rampWeek?.spend || 0)
+    const weeklyEarn = mercuryWeek.revenue
+    return {
+      weekLabel: mercuryWeek.weekLabel,
+      weeklyBurn,
+      weeklyEarn,
+      percentPaid: weeklyBurn > 0 ? (weeklyEarn / weeklyBurn) * 100 : 0,
+      cashCollected: mercuryWeek.revenue,
+    }
+  })
+
+  // Get current week metrics (last item in the array)
+  const currentWeekData = weeklyTrendsData[weeklyTrendsData.length - 1]
+
+  // Calculate current week metrics
+  const mercurySpendExcludingRamp = currentWeekData?.weeklyBurn || 0
+  const weeklyBurn = currentWeekData?.weeklyBurn || 0
+  const weeklyEarn = currentWeekData?.weeklyEarn || 0
+  const percentWeekPaid = currentWeekData?.percentPaid || 0
+  const cashCollected = currentWeekData?.cashCollected || 0
+
+  // Check if we have real financial data
+  const hasFinancialData = mercuryData8Weeks !== null || rampData8Weeks !== null
+
+  // For bank balance, use the 8-week data
+  const mercuryData = mercuryData8Weeks
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -71,21 +129,23 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Sample Data Warning */}
-      <Card className="border-yellow-200 bg-yellow-50">
-        <CardContent className="flex items-center gap-4 py-4">
-          <AlertTriangle className="h-5 w-5 text-yellow-600" />
-          <div className="flex-1">
-            <p className="font-medium text-yellow-800">Using sample data</p>
-            <p className="text-sm text-yellow-700">
-              Connect QuickBooks to see your real financial data
-            </p>
-          </div>
-          <Button size="sm" asChild>
-            <Link href="/dashboard/integrations">Connect Now</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Sample Data Warning - only show if no financial integrations */}
+      {!hasFinancialData && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="flex items-center gap-4 py-4">
+            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <div className="flex-1">
+              <p className="font-medium text-yellow-800">Connect your financial accounts</p>
+              <p className="text-sm text-yellow-700">
+                Connect Mercury and Ramp to see real-time financial metrics
+              </p>
+            </div>
+            <Button size="sm" asChild>
+              <Link href="/dashboard/integrations">Connect Now</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Platform Stats - Real Data */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -131,7 +191,81 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Key Metrics */}
+      {/* Weekly Financial Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card className={hasFinancialData ? 'border-red-200 bg-red-50' : ''}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Weekly Burn</CardTitle>
+            <Flame className={`h-4 w-4 ${hasFinancialData ? 'text-red-600' : 'text-muted-foreground'}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${hasFinancialData ? 'text-red-700' : ''}`}>
+              {hasFinancialData ? formatCurrency(weeklyBurn) : '--'}
+            </div>
+            <p className={`text-xs ${hasFinancialData ? 'text-red-600' : 'text-muted-foreground'}`}>
+              {hasFinancialData ? 'Ramp + Mercury (no dupes)' : 'Connect Mercury & Ramp'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={hasFinancialData ? 'border-green-200 bg-green-50' : ''}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Weekly Earn</CardTitle>
+            <Receipt className={`h-4 w-4 ${hasFinancialData ? 'text-green-600' : 'text-muted-foreground'}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${hasFinancialData ? 'text-green-700' : ''}`}>
+              {hasFinancialData ? formatCurrency(weeklyEarn) : '--'}
+            </div>
+            <p className={`text-xs ${hasFinancialData ? 'text-green-600' : 'text-muted-foreground'}`}>
+              {hasFinancialData ? 'Deposits this week' : 'Connect Mercury'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={hasFinancialData ? (percentWeekPaid >= 100 ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50') : ''}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">% Week Paid</CardTitle>
+            <Percent className={`h-4 w-4 ${hasFinancialData ? (percentWeekPaid >= 100 ? 'text-green-600' : 'text-yellow-600') : 'text-muted-foreground'}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${hasFinancialData ? (percentWeekPaid >= 100 ? 'text-green-700' : 'text-yellow-700') : ''}`}>
+              {hasFinancialData ? `${percentWeekPaid.toFixed(0)}%` : '--'}
+            </div>
+            <p className={`text-xs ${hasFinancialData ? (percentWeekPaid >= 100 ? 'text-green-600' : 'text-yellow-600') : 'text-muted-foreground'}`}>
+              {hasFinancialData ? 'Earn / Burn' : 'Connect integrations'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={hasFinancialData ? 'border-blue-200 bg-blue-50' : ''}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cash Collected</CardTitle>
+            <Banknote className={`h-4 w-4 ${hasFinancialData ? 'text-blue-600' : 'text-muted-foreground'}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${hasFinancialData ? 'text-blue-700' : ''}`}>
+              {hasFinancialData ? formatCurrency(cashCollected) : '--'}
+            </div>
+            <p className={`text-xs ${hasFinancialData ? 'text-blue-600' : 'text-muted-foreground'}`}>
+              {hasFinancialData ? 'This week' : 'Connect Mercury'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total AR</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">--</div>
+            <p className="text-xs text-muted-foreground">Coming soon (QBO)</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bank Balance & Runway */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Employees"
@@ -141,30 +275,37 @@ export default async function DashboardPage() {
         />
         <MetricCard
           title="Bank Balance"
-          value={`$${(FINANCIAL_DATA.cashBalance / 1000).toFixed(0)}k`}
-          description="Across all accounts"
+          value={mercuryData ? formatCurrency(mercuryData.stats.totalBalance) : `$${(FINANCIAL_DATA.cashBalance / 1000).toFixed(0)}k`}
+          description={mercuryData ? 'From Mercury' : 'Sample data'}
           icon={Landmark}
         />
         <MetricCard
           title="Monthly Burn"
-          value={`$${(FINANCIAL_DATA.monthlyBurn / 1000).toFixed(0)}k`}
-          description="Operating expenses"
+          value={mercuryData ? formatCurrency(weeklyBurn * 4) : `$${(FINANCIAL_DATA.monthlyBurn / 1000).toFixed(0)}k`}
+          description={mercuryData ? 'Estimated from weekly' : 'Sample data'}
           icon={DollarSign}
         />
         <MetricCard
           title="Runway"
-          value={`${FINANCIAL_DATA.runway} months`}
+          value={mercuryData && weeklyBurn > 0
+            ? `${(mercuryData.stats.totalBalance / (weeklyBurn * 4)).toFixed(1)} months`
+            : `${FINANCIAL_DATA.runway} months`}
           description="At current burn rate"
           icon={TrendingUp}
         />
       </div>
 
+      {/* Weekly Trends Charts */}
+      {hasFinancialData && weeklyTrendsData.length > 0 && (
+        <WeeklyTrendsChart data={weeklyTrendsData} />
+      )}
+
       {/* Charts Row */}
       <div className="grid gap-6 lg:grid-cols-2">
         <RunwayChart
           data={data.quickbooks.pnl}
-          bankBalance={FINANCIAL_DATA.cashBalance}
-          monthlyBurn={FINANCIAL_DATA.monthlyBurn}
+          bankBalance={mercuryData?.stats.totalBalance || FINANCIAL_DATA.cashBalance}
+          monthlyBurn={weeklyBurn > 0 ? weeklyBurn * 4 : FINANCIAL_DATA.monthlyBurn}
         />
         <RevenueExpenseChart data={data.quickbooks.pnl} />
       </div>
